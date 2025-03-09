@@ -1,0 +1,36 @@
+/* RestaurantDetails.css */
+
+/* Basic styling for the Restaurant Details page */
+.restaurant-name {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.reviews h4 {
+    margin-top: 2rem;
+    font-size: 1.5rem;
+}
+
+.review-item {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+}
+
+.review-item + .review-item {
+    margin-top: 1rem;
+}
+
+/* Map Container */
+.map-container {
+    position: sticky;
+    top: 20px;
+    height: fit-content;
+}
+
+/* Adjust spacing on smaller screens */
+@media (max-width: 576px) {
+    .restaurant-name {
+        font-size: 1.5rem;
+    }
+}
