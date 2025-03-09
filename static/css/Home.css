@@ -1,0 +1,53 @@
+/* style.css */
+body {
+    font-family: 'Arial', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Carousel */
+.carousel-item {
+    height: 400px;
+    overflow: hidden;
+}
+
+.carousel-item img {
+    object-fit: cover;
+    height: 100%;
+}
+
+/* Restaurant Cards */
+.restaurant-card {
+    transition: transform 0.3s ease;
+    border: none;
+    overflow: hidden;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-5px);
+}
+
+.restaurant-card img {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Map Container */
+.map-container {
+    position: sticky;
+    top: 20px;
+    height: fit-content;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .map-container {
+        position: static;
+        margin-top: 2rem;
+    }
+    
+    .carousel-item {
+        height: 300px;
+    }
+}
