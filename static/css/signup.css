@@ -1,0 +1,87 @@
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f2f2f2;
+}
+
+.main-container {
+    width: 90%;
+    max-width: 1100px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    background-color: #ffffff;
+}
+
+.image-side {
+    background-image: url('../images/Signup.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 100%;
+}
+
+.form-side {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.image-side,
+.form-side {
+    height: 100%;
+}
+
+.login-row {
+    display: flex;
+    height: 600px;
+}
+
+@media (max-width: 767px) {
+    .login-row {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .image-side {
+        background-image: url('../images/Newari.jpg');
+        background-size: cover;
+        background-position: center;
+        height: 250px;
+    }
+
+    .form-side {
+        padding: 20px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .main-container {
+        width: 95%;
+    }
+}
+
+@media (min-width: 768px) {
+    .login-row {
+        flex-direction: row;
+    }
+
+    .image-side {
+        width: 50%;
+    }
+
+    .form-side {
+        width: 50%;
+    }
+}
