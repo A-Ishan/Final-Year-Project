@@ -5,6 +5,8 @@ from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import CustomUser
+from django.contrib.auth.decorators import login_required
+from .forms import KYCForm
 
 otp_storage = {}  # Temporary storage for OTPs
 
@@ -67,3 +69,29 @@ def login_view(request):
             messages.error(request, "Invalid credentials")
 
     return render(request, "accounts/login.html")
+
+
+@login_required
+def kyc_verification(request):
+    user = request.user
+
+    if user.kyc_verified:
+        # If the user is verified, show a success message
+        return render(request, 'accounts/verify.html', {
+            'is_verified': True,
+            'message': 'Your KYC has been successfully verified.',
+        })
+
+    if request.method == 'POST':
+        form = KYCForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            # Save the uploaded documents
+            form.save()
+            return redirect('kyc_verification')  # Redirect to the same page to show success message
+    else:
+        form = KYCForm(instance=user)
+
+    return render(request, 'accounts/verify.html', {
+        'form': form,
+        'is_verified': False,
+    })

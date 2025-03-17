@@ -1,0 +1,19 @@
+<!-- templates/account/verify.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>KYC Verification</h2>
+
+  {% if is_verified %}
+    <p>{{ message }}</p>
+  {% else %}
+    <h3>Upload your KYC Documents</h3>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Upload Documents</button>
+    </form>
+    <p>Please upload your ID front, ID back, and a selfie with the ID for verification.</p>
+  {% endif %}
+{% endblock %}

@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -133,3 +133,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'hello2bishal@gmail.com'
 EMAIL_HOST_PASSWORD = 'hyiaiwktpwxrkosc' 
 DEFAULT_FROM_EMAIL = "hello2bishal@gmail.com"
+
+# -----------------------Manual ----------------------------------------------
+# Media files configuration
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIAFILES_DIRS = '/media/' 
