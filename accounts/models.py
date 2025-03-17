@@ -21,11 +21,25 @@ class CustomUserManager(BaseUserManager):
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     # New fields for KYC verification
+    
     kyc_document_front = models.ImageField(upload_to='kyc_documents/', null=True, blank=True)
     kyc_document_back = models.ImageField(upload_to='kyc_documents/', null=True, blank=True)
     kyc_document_selfie = models.ImageField(upload_to='kyc_documents/', null=True, blank=True)
     kyc_verified = models.BooleanField(default=False)  # This is to track if the user is verified
 
+    profile_picture = models.ImageField(
+        upload_to='profile_pictures/', 
+        null=True, 
+        blank=True
+    )
+    STATUS_CHOICES = [
+        ('pending', 'Documents Sent for Verification'),
+        ('verified', 'Your Document has been Verified'),
+        ('rejected', 'Verification Rejected'),
+        ('kyc_required', 'Please Proceed to KYC Verification'),
+    ]
+    verification_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='kyc_required')
+    rejection_reason = models.TextField(blank=True, null=True)
 
     # Fix clashes by adding related_name arguments
     groups = models.ManyToManyField(

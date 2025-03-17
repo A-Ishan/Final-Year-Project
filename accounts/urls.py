@@ -12,6 +12,8 @@ urlpatterns = [
     path("login/", login_view, name="login"),
     path("logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
     path('account/verify/', views.kyc_verification, name='kyc_verification'),
+    path("update-profile-picture/", views.update_profile_picture, name="update_profile_picture"),
+
 ]
 
 if settings.DEBUG:

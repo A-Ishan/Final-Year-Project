@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import CustomUser
 from django.contrib.auth.decorators import login_required
-from .forms import KYCForm
+from .forms import KYCForm, ProfilePictureForm
 
 otp_storage = {}  # Temporary storage for OTPs
 
@@ -75,23 +75,57 @@ def login_view(request):
 def kyc_verification(request):
     user = request.user
 
-    if user.kyc_verified:
-        # If the user is verified, show a success message
+    if user.verification_status == 'verified':
         return render(request, 'accounts/verify.html', {
             'is_verified': True,
             'message': 'Your KYC has been successfully verified.',
         })
-
+    
     if request.method == 'POST':
         form = KYCForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
-            # Save the uploaded documents
             form.save()
-            return redirect('kyc_verification')  # Redirect to the same page to show success message
+            user.verification_status = 'pending'  # Mark as pending after submission
+            user.save()
+            messages.success(request, "Documents uploaded successfully. Your verification is in process.")
+            return redirect('kyc_verification')
     else:
         form = KYCForm(instance=user)
 
     return render(request, 'accounts/verify.html', {
         'form': form,
         'is_verified': False,
+        'status': user.get_verification_status_display(),
+        'rejection_reason': user.rejection_reason if user.verification_status == 'rejected' else None
     })
+
+@login_required
+def update_verification_status(request, user_id):
+    user_profile = get_object_or_404(CustomUser, id=user_id)
+
+    if request.method == 'POST':
+        form = VerificationStatusForm(request.POST, instance=user_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Verification status updated for {user_profile.username}.")
+            return redirect('admin_dashboard')  # Redirect to admin page
+
+    else:
+        form = VerificationStatusForm(instance=user_profile)
+
+    return render(request, 'accounts/update_verification_status.html', {'form': form, 'user_profile': user_profile})
+
+@login_required
+def update_profile_picture(request):
+    user = request.user
+
+    if request.method == "POST":
+        form = ProfilePictureForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect("kyc_verification")  # Redirect back to the profile page
+
+    else:
+        form = ProfilePictureForm(instance=user)
+
+    return render(request, "accounts/update_profile.html", {"form": form})
