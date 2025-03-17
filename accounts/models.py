@@ -22,6 +22,10 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     # New fields for KYC verification
     
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    social_media_link = models.URLField(blank=True, null=True)
+    
+    verification_reason = models.TextField(blank=True, null=True)
     kyc_document_front = models.ImageField(upload_to='kyc_documents/', null=True, blank=True)
     kyc_document_back = models.ImageField(upload_to='kyc_documents/', null=True, blank=True)
     kyc_document_selfie = models.ImageField(upload_to='kyc_documents/', null=True, blank=True)
