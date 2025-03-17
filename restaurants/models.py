@@ -7,6 +7,6 @@ class Review(models.Model):
     review_text = models.TextField()  # The actual review text
     rating = models.PositiveIntegerField()  # Rating (e.g., 1-5)
     created_at = models.DateTimeField(auto_now_add=True)  # Automatically set the creation time of the review
-
+ 
     def __str__(self):
         return f"Review by {self.user} for place_id {self.place_id}"
