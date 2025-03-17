@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}{{ restaurant.name }}{% endblock %}
+{% block content %}
+
+<main class="container my-5">
+    <!-- Restaurant Header -->
+    <div class="card shadow-lg mb-4">
+        <div class="row g-0">
+            <!-- Restaurant Image -->
+            <div class="col-md-5">
+                <img src="{{ restaurant.image }}" class="img-fluid rounded-start" alt="Restaurant Image">
+            </div>
+            <!-- Restaurant Info -->
+            <div class="col-md-7">
+                <div class="card-body">
+                    <h2 class="restaurant-name mb-3">{{ restaurant.name }}</h2>
+                    <p class="mb-2"><i class="bi bi-geo-alt-fill"></i> <strong>Location:</strong> {{ restaurant.address }}</p>
+                    <p class="mb-2"><i class="bi bi-cash-stack"></i> <strong>Price Tier:</strong> {{ restaurant.price_level }}</p>
+                    <p class="mb-2"><i class="bi bi-star-fill text-warning"></i> <strong>Rating:</strong> {{ restaurant.rating }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Left Column: Reviews -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm p-4">
+                <h4 class="mb-4">Customer Reviews</h4>
+
+                <!-- Review Form -->
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="place_id" value="{{ restaurant.place_id }}">
+
+                    <div class="mb-3">
+                        <label for="rating" class="form-label">Your Rating</label>
+                        <select class="form-select" id="rating" name="rating" required>
+                            <option value="5">⭐⭐⭐⭐⭐ - Excellent</option>
+                            <option value="4">⭐⭐⭐⭐ - Very Good</option>
+                            <option value="3">⭐⭐⭐ - Good</option>
+                            <option value="2">⭐⭐ - Fair</option>
+                            <option value="1">⭐ - Poor</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="review" class="form-label">Your Review</label>
+                        <textarea class="form-control" id="review" name="review" rows="3" placeholder="Write your experience..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+                </form>
+
+                <!-- Display Reviews -->
+                <div class="mt-4">
+                    {% for review in reviews %}
+                    <div class="review-item border-bottom pb-3 mb-3">
+                        <p class="mb-1"><strong>{{ review.user }}</strong> <small class="text-muted">rated {{ review.rating }}⭐</small></p>
+                        <p class="mb-0">{{ review.review_text }}</p>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No reviews yet. Be the first to review!</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Map -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm p-3">
+                <h4 class="mb-3">Location</h4>
+                <div class="ratio ratio-1x1">
+                    <iframe
+                        src="{{ map_embed_url }}"
+                        class="rounded"
+                        style="border:0;"
+                        allowfullscreen
+                        loading="lazy">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+{% endblock %}

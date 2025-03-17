@@ -1,40 +1,105 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nearby Restaurants | FoodHunt</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 font-sans">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">🍽️ Nearby Restaurants</h1>
+{% extends 'base.html' %}
 
-        <div class="flex justify-center mb-6">
-            <button onclick="getLocation()" 
-                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                📍 Use My Location
+{% block title %}Nearby Restaurants | FoodHunt{% endblock %}
+
+{% block content %}
+    <div class="container py-5">
+        <h1 class="text-center mb-4">🍽️ Nearby Restaurants</h1>
+
+        <div class="d-flex justify-content-center mb-4">
+            <button onclick="getLocation()" class="btn btn-success btn-lg">
+                Scan Restaurants
             </button>
         </div>
 
         {% if restaurants %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                 {% for restaurant in restaurants %}
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <img src="{{ restaurant.photo }}" alt="{{ restaurant.name }}" class="w-full h-48 object-cover rounded-md">
-                    <h2 class="text-xl font-semibold mt-2">{{ restaurant.name }}</h2>
-                    <p class="text-gray-600">📍 {{ restaurant.address }}</p>
-                    <p class="text-yellow-500 font-bold">⭐ {{ restaurant.rating }}/5</p>
-                    <a href="https://www.google.com/maps/place/?q=place_id:{{ restaurant.place_id }}" 
-                       class="block text-center bg-blue-500 text-white mt-3 py-2 rounded-lg hover:bg-blue-600 transition">
-                       View on Map
-                    </a>
+                <div class="col">
+                    <div class="card shadow-sm h-100">
+                        <img src="{{ restaurant.photo }}" alt="{{ restaurant.name }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ restaurant.name }}</h5>
+                            <p class="card-text text-muted">📍 {{ restaurant.address }}</p>
+
+                            <!-- Average Rating -->
+                            <p class="card-text text-warning">
+                                ⭐ 
+                                {% if restaurant.rating %}
+                                    {{ restaurant.rating|floatformat:1 }}/5
+                                {% else %}
+                                    No reviews yet
+                                {% endif %}
+                            </p>
+
+                            <!-- Price Range -->
+                            {% if restaurant.price_level %}
+                                <p class="card-text text-muted">💵 Price Range: 
+                                    {% if restaurant.price_level == 1 %}
+                                        $
+                                    {% elif restaurant.price_level == 2 %}
+                                        $$
+                                    {% elif restaurant.price_level == 3 %}
+                                        $$$
+                                    {% elif restaurant.price_level == 4 %}
+                                        $$$$
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </p>
+                            {% endif %}
+
+                            <!-- Button to view on Google Maps -->
+                            <a href="https://www.google.com/maps/place/?q=place_id:{{ restaurant.place_id }}" 
+                               class="btn btn-primary btn-sm w-100">
+                               View on Map
+                            </a>
+
+                            <!-- Reviews Section -->
+                            {% if restaurant.reviews.all %}
+                                <div class="mt-4">
+                                    <h6 class="font-weight-bold">Reviews</h6>
+                                    <ul class="list-unstyled">
+                                        {% for review in restaurant.reviews.all %}
+                                            <li class="border-bottom py-2">
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="text-warning">⭐ {{ review.rating }}/5</span>
+                                                </div>
+                                                <p class="text-muted">{{ review.review_text }}</p>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mt-2">Be the first to review this restaurant!</p>
+                            {% endif %}
+<!-- Add Review Form -->
+<div class="mt-4">
+    <h6 class="font-weight-bold">Add a Review</h6>
+    <form method="POST" action="{% url 'add_review' %}?lat={{ request.GET.lat }}&lng={{ request.GET.lng }}">
+        {% csrf_token %}
+        <div class="mb-3">
+            <textarea name="review_text" rows="3" class="form-control" placeholder="Write your review..."></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="rating" class="form-label">Rating</label>
+            <input type="number" name="rating" min="1" max="5" class="form-control" required>
+        </div>
+        <!-- Pass the place_id from the Google Places API to the form -->
+        <input type="hidden" name="place_id" value="{{ restaurant.place_id }}">
+
+        <button type="submit" class="btn btn-success w-100">Submit Review</button>
+    </form>
+</div>
+
+
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
         {% else %}
-            <p class="text-center text-gray-600">No restaurants found. Try adjusting your location.</p>
+            <p class="text-center text-muted">No restaurants found. Try adjusting your location.</p>
         {% endif %}
     </div>
 
@@ -48,6 +113,49 @@
                 alert("Geolocation is not supported by this browser.");
             }
         }
+
+        // Handle the form submission using AJAX
+        document.querySelectorAll('.add-review-form').forEach(form => {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent the default form submission
+                const placeId = form.getAttribute('data-place-id');
+                const reviewText = form.querySelector('textarea[name="review_text"]').value;
+                const rating = form.querySelector('input[name="rating"]').value;
+
+                // Send review to the server via AJAX
+                fetch(`/restaurants/add_review/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        place_id: placeId,
+                        review_text: reviewText,
+                        rating: rating
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Handle the response, update UI (e.g., append new review)
+                    if (data.success) {
+                        const newReview = document.createElement('li');
+                        newReview.classList.add('border-bottom', 'py-2');
+                        newReview.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <span class="text-warning">⭐ ${data.review.rating}/5</span>
+                            </div>
+                            <p class="text-muted">${data.review.review_text}</p>
+                        `;
+                        form.closest('.card-body').querySelector('ul').appendChild(newReview);
+
+                        // Optionally reset the form
+                        form.reset();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
     </script>
-</body>
-</html>
+
+{% endblock %}
