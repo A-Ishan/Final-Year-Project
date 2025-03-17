@@ -149,3 +149,5 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='hello2bishal@gmail.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='hello2bishal@gmail.com')
 GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
+
+LOGIN_URL = '/auth/login/'
