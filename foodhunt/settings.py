@@ -28,8 +28,8 @@ SECRET_KEY = 'django-insecure-y3bp1m&qd^sy-^enfuq%jk!#tt@w3n5hhbk2dg79=u&z#irhyk
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-AUTH_USER_MODEL = "accounts.CustomUser"
-AUTHENTICATION_BACKENDS = ['accounts.backends.UsernameOrEmailBackend']
+AUTH_USER_MODEL = "accounts.User"
+AUTHENTICATION_BACKENDS = ['accounts.backends.CustomAuthBackend']
 
 # Application definition
 
@@ -81,7 +81,7 @@ WSGI_APPLICATION = 'foodhunt.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': "mydb",
+        'NAME': "mydb1",
     }
 }
 
@@ -133,21 +133,9 @@ MEDIAFILES_DIRS = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-
-
-
-
-
-
 # API CONFIG
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='hello2bishal@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='hello2bishal@gmail.com')
+SPARROW_SMS_TOKEN = config('SPARROW_SMS_TOKEN', default='')
+SPARROW_SMS_FROM = config('SPARROW_SMS_FROM', default='')
 GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
 
 LOGIN_URL = '/auth/login/'

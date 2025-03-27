@@ -1,87 +1,161 @@
+{% extends 'base.html' %}
+{% block content %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // Geolocation and fetching nearby restaurants
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+            fetchRestaurants(position.coords.latitude, position.coords.longitude);
+        }, () => alert("Geolocation not available."));
+    } else {
+        alert("Geolocation not supported!");
+    }
+</script>
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
 
-    
-    {% extends 'base.html' %}
-    {% block content %}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .restaurant-card {
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease-in-out;
-        }
-        .restaurant-card:hover {
-            transform: scale(1.05);
-        }
-        .restaurant-img {
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-        }
-    </style>
+    .restaurant-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease-in-out;
+        min-width: 300px;
+    }
 
-    <div class="container py-5">
-        <h1 class="text-center mb-4">Find Nearby Restaurants</h1>
-        
-        <div class="d-flex justify-content-center mb-4">
-            <input type="text" id="searchBox" class="form-control w-50 me-2" placeholder="Search...">
-            <button class="btn btn-primary" id="scanBtn">Scan Nearby</button>
+    .restaurant-card:hover {
+        transform: scale(1.05);
+    }
+
+    .restaurant-img {
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+    }
+
+    .map-container {
+        position: relative;
+        height: 100%;
+    }
+
+    .scan-btn {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .max-height-image{
+        height: 300px;
+        object-fit: cover;
+    }
+
+</style>
+
+<main class="container my-5">
+    <div class="row">
+        <!-- Left Sidebar: Search + Categories (Checkboxes) + Filter Button -->
+        <div class="col-lg-3 mb-4">
+            <!-- Search Bar -->
+            <h5 class="mb-3">Search</h5>
+            <input type="text" class="form-control mb-4" placeholder="Search..." id="searchBox">
+
+            <!-- Categories (Checkboxes) -->
+            <h5 class="mb-3">Categories</h5>
+            <form method="get" action="">
+                {% for category in categories %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="category" value="{{ category.id }}" id="category{{ category.id }}">
+                        <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
+                    </div>
+                {% endfor %}
+                <!-- Filter Button -->
+                <button type="submit" class="btn btn-secondary w-100 mt-3">Filter</button>
+            </form>
         </div>
-        
-        <div class="text-center mb-4">
-            <label class="me-2"><input type="checkbox" class="category" value="Pizza"> Pizza</label>
-            <label class="me-2"><input type="checkbox" class="category" value="Chinese"> Chinese</label>
-            <label><input type="checkbox" class="category" value="Cafe"> Cafe</label>
+
+        <!-- Middle Column: 10 Restaurant Items -->
+        <div class="col-lg-5 mb-4">
+            <div id="restaurantList" class="row g-4">
+                <!-- Dynamically generated restaurant cards will go here -->
+            </div>
         </div>
-        
-        <div id="restaurantList" class="row g-4"></div>
+
+        <!-- Right Column: Map + "Scan Nearby" Button -->
+        <div class="col-lg-4">
+            <div class="map-container position-relative rounded shadow">
+                <div class="ratio ratio-16x9">
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18..." 
+                        style="border:0;" 
+                        allowfullscreen 
+                        loading="lazy">
+                    </iframe>
+                </div>
+                <!-- Scan Button at Bottom Center -->
+                <button class="btn btn-primary scan-btn" id="scanBtn">
+                    Scan Nearby Restaurants
+                </button>
+            </div>
+        </div>
     </div>
+</main>
 
-    <script>
-        function fetchRestaurants(latitude, longitude) {
-            let selectedCategories = $(".category:checked").map(function() {
-                return this.value;
-            }).get();
+<script>
+    // Function to fetch and display nearby restaurants
+    function fetchRestaurants(latitude, longitude) {
+        let selectedCategories = $(".category:checked").map(function() {
+            return this.value;
+        }).get();
 
-            $.getJSON("/restaurants/get_nearby_restaurants/", {
-                latitude: latitude,
-                longitude: longitude,
-                category: selectedCategories
-            }, function(data) {
-                $("#restaurantList").empty();
-                if (data.restaurants) {
-                    data.restaurants.forEach(r => {
-                        $("#restaurantList").append(`
-                            <div class="col-md-4">
-                                <div class="card restaurant-card">
-                                    ${r.image ? `<img src="${r.image}" class="card-img-top restaurant-img" alt="Restaurant Image">` : ""}
-                                    <div class="card-body">
-                                        <h5 class="card-title">${r.name}</h5>
-                                        <p class="card-text">Rating: ${r.rating}</p>
-                                        <p class="text-muted">${r.address}</p>
-                                        <a href="/restaurants/${r.place_id}" class="btn btn-primary">View Details</a>
-                                    </div>
+        $.getJSON("/restaurants/get_nearby_restaurants/", {
+            latitude: latitude,
+            longitude: longitude,
+            category: selectedCategories,
+            search: $("#searchBox").val()
+        }, function(data) {
+            $("#restaurantList").empty();
+            if (data.restaurants) {
+                data.restaurants.forEach(r => {
+                    $("#restaurantList").append(`
+                        <div class="col">
+                            <div class="card restaurant-card">
+                                ${r.image ? `<img src="${r.image}" class="card-img-top restaurant-img max-height-image" alt="Restaurant Image">` : ""}
+                                <div class="card-body">
+                                    <h5 class="card-title">${r.name}</h5>
+                                    <p class="card-text">Rating: ${r.rating}</p>
+                                    <p class="text-muted">${r.address}</p>
+                                    <a href="/restaurants/${r.place_id}" class="btn btn-primary">View Details</a>
+                                    <p>${r.distance}</p>
                                 </div>
                             </div>
-                        `);
-                    });
-                } else {
-                    $("#restaurantList").html("<p class='text-center text-danger'>No restaurants found.</p>");
-                }
-            }).fail(() => alert("Failed to fetch restaurants!"));
-        }
-
-        $("#scanBtn").click(function() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-                    fetchRestaurants(position.coords.latitude, position.coords.longitude);
-                }, () => alert("Geolocation not available."));
+                        </div>
+                    `);
+                });
             } else {
-                alert("Geolocation not supported!");
+                $("#restaurantList").html("<p class='text-center text-danger'>No restaurants found.</p>");
             }
-        });
-    </script>
+        }).fail(() => alert("Failed to fetch restaurants!"));
+    }
 
-    {% endblock %}
+    // "Scan Nearby" button click event
+    $("#scanBtn").click(function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                fetchRestaurants(position.coords.latitude, position.coords.longitude);
+            }, () => alert("Geolocation not available."));
+        } else {
+            alert("Geolocation not supported!");
+        }
+    });
 
+    // Adding real-time search filtering functionality
+    $("#searchBox").on("keyup", function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                fetchRestaurants(position.coords.latitude, position.coords.longitude);
+            }, () => alert("Geolocation not available."));
+        }
+    });
+</script>
+
+{% endblock %}

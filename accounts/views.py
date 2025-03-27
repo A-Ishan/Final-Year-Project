@@ -1,75 +1,83 @@
-import random
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from .models import CustomUser
+from .forms import SignupForm, LoginForm, OTPForm
+from .models import User, PhoneOTP
+from .utils import generate_otp, send_otp
 from django.contrib.auth.decorators import login_required
-from .forms import KYCForm, ProfilePictureForm
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from .models import User
+from datetime import timedelta
+from .forms import KYCForm, VerificationStatusForm, ProfilePictureForm
+import requests
 
-otp_storage = {}  # Temporary storage for OTPs
-
-def send_otp(email):
-    otp = str(random.randint(100000, 999999))
-    otp_storage[email] = otp  # Store OTP temporarily
-
-    send_mail(
-        "Your OTP Code",
-        f"Your OTP is: {otp}",
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        fail_silently=False,
-    )
-    return otp
-
-def signup(request):
-    if request.method == "POST":
-        username = request.POST["username"]
-        email = request.POST["email"]
-        password = request.POST["password"]
-
-        if CustomUser.objects.filter(email=email).exists():
-            messages.error(request, "Email already registered.")
-            return redirect("signup")
-
-        send_otp(email)
-        request.session["signup_data"] = {"username": username, "email": email, "password": password}
-        return redirect("verify_otp")
-
-    return render(request, "accounts/signup.html")
-
-def verify_otp(request):
-    if request.method == "POST":
-        email = request.session["signup_data"]["email"]
-        entered_otp = request.POST["otp"]
-
-        if otp_storage.get(email) == entered_otp:
-            data = request.session.pop("signup_data")
-            user = CustomUser.objects.create_user(username=data["username"], email=data["email"], password=data["password"])
+def signup_view(request):
+    if request.method == 'POST':
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
             user.save()
-            messages.success(request, "Account created successfully!")
-            return redirect("login")
+            # Generate and send OTP
+            otp = generate_otp()
+            PhoneOTP.objects.create(user=user, otp=otp)
+            if send_otp(user.phone_number, otp):
+                messages.success(request, "OTP sent to your phone.")
+                return redirect('verify_otp', user_id=user.id)
+            else:
+                messages.error(request, "Failed to send OTP.")
+                user.delete()  # Rollback if OTP fails
         else:
-            messages.error(request, "Invalid OTP.")
-            return redirect("verify_otp")
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = SignupForm()
+    
+    return render(request, 'accounts/signup.html', {'form': form})
 
-    return render(request, "accounts/verify_otp.html")
+def verify_otp_view(request, user_id):
+    user = User.objects.get(id=user_id)
+    if request.method == 'POST':
+        form = OTPForm(request.POST)
+        if form.is_valid():
+            otp_input = form.cleaned_data['otp']
+            otp_obj = PhoneOTP.objects.filter(user=user, otp=otp_input, is_used=False).first()
+            if otp_obj and (timezone.now() - otp_obj.created_at) < timedelta(minutes=5):
+                otp_obj.is_used = True
+                otp_obj.save()
+                user.is_phone_verified = True
+                user.save()
+                messages.success(request, "Phone verified successfully. You can now log in.")
+                return redirect('login')
+            else:
+                messages.error(request, "Invalid or expired OTP.")
+    else:
+        form = OTPForm()
+    return render(request, 'accounts/verify_otp.html', {'form': form, 'user_id': user_id})
 
 def login_view(request):
-    if request.method == "POST":
-        username_or_email = request.POST["username"]
-        password = request.POST["password"]
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            login_field = form.cleaned_data['login_field']
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=login_field, password=password)
+            if user and user.is_phone_verified:
+                login(request, user)
+                messages.success(request, f"Welcome, {user.username}!")
+                return redirect('home')
+            elif user and not user.is_phone_verified:
+                messages.error(request, "Please verify your phone number first.")
+            else:
+                messages.error(request, "Invalid credentials.")
+    else:
+        form = LoginForm()
+    return render(request, 'accounts/login.html', {'form': form})
 
-        user = authenticate(request, username=username_or_email, password=password)
-        if user:
-            login(request, user)
-            return redirect("home")
-        else:
-            messages.error(request, "Invalid credentials")
-
-    return render(request, "accounts/login.html")
-
+def logout_view(request):
+    logout(request)
+    messages.success(request, "Logged out successfully.")
+    return redirect('login')
 
 @login_required
 def kyc_verification(request):
@@ -101,7 +109,7 @@ def kyc_verification(request):
 
 @login_required
 def update_verification_status(request, user_id):
-    user_profile = get_object_or_404(CustomUser, id=user_id)
+    user_profile = get_object_or_404(User, id=user_id)
 
     if request.method == 'POST':
         form = VerificationStatusForm(request.POST, instance=user_profile)
