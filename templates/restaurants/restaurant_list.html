@@ -8,6 +8,7 @@
     let userLatitude = null;
     let userLongitude = null;
     var locations1 = [];
+    let markers = []; // Array to store all map markers
 
     function initMap() {
         if (userLatitude === null || userLongitude === null) {
@@ -71,6 +72,7 @@
                                     <h5 class="card-title">${r.name}</h5>
                                     <p class="card-text">⭐ ${r.rating}</p>
                                     <p class="text-muted">📍 ${r.address}</p>
+                                    <p class="card-text">${r.distance} meters</p>
                                     <a href="/restaurants/${r.place_id}" class="btn btn-outline-primary btn-sm">View Details</a>
                                 </div>
                             </div>
@@ -81,6 +83,7 @@
                 $("#restaurantList").html("<p class='text-center text-danger'>No restaurants found.</p>");
             }
             if (data.locations) {
+                locations1 = [];
                 locations1 = data.locations;
                 addMarkersToMap(locations1);
             }
@@ -93,13 +96,19 @@
             return;
         }
 
+        // Clear existing markers from the map
+        markers.forEach(marker => marker.setMap(null));
+        markers = []; // Reset the markers array
+
+        // Add new markers to the map
         locations.forEach((location) => {
             if (location.lat && location.lng) {
-                new google.maps.Marker({
+                const marker = new google.maps.Marker({
                     position: { lat: location.lat, lng: location.lng },
                     map: map,
                     title: location.title || "No title available",
                 });
+                markers.push(marker); // Store the marker in the array
             }
         });
     }

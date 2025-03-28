@@ -40,7 +40,7 @@ def get_nearby_restaurants(request):
 
         if not latitude or not longitude:
             return JsonResponse({"error": "Location not provided"}, status=400)
-
+        userlocation=[float(latitude), float(longitude)]
         api_key = settings.GOOGLE_PLACES_API_KEY
         base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 
@@ -49,7 +49,7 @@ def get_nearby_restaurants(request):
 
         params = {
             "location": f"{latitude},{longitude}",
-            "radius": 2000,  # 2km radius
+            "radius": 1000,  # 2km radius
             "type": "restaurant",
             "keyword": search_keyword,  # Apply search keyword
             "key": api_key
@@ -80,7 +80,8 @@ def get_nearby_restaurants(request):
                     "rating": rating,
                     "address": address,
                     "image": image,
-                    "place_id": place_id
+                    "place_id": place_id,
+                    "distance": calculate_distance(userlocation, [lat, lng]),
                 })
 
             return JsonResponse({"restaurants": restaurants, "locations": locations})
