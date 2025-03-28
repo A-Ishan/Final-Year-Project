@@ -29,16 +29,12 @@ def calculate_distance(user_location, restaurant_location):
 def restaurant_list(request):
     categories = catagory.objects.all()
     api_key = settings.GOOGLE_PLACES_API_KEY
-    return render(request, 'restaurants/restaurant_list.html', {"categories": categories, "apikey": api_key}) 
-
+    return render(request, 'restaurants/restaurant_list.html', {"categories": categories, "apikey": api_key})
 
 def get_nearby_restaurants(request):
-    userlocation=[]
     if request.method == "GET":
         latitude = request.GET.get("latitude")
         longitude = request.GET.get("longitude")
-        userlocation.append(float(latitude))
-        userlocation.append(float(longitude))
         categories = request.GET.getlist("category")  # List of selected categories
 
         if not latitude or not longitude:
@@ -47,26 +43,28 @@ def get_nearby_restaurants(request):
         api_key = settings.GOOGLE_PLACES_API_KEY
         base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 
+        # Convert category names into a single keyword string
+        keyword = ",".join(categories) if categories else "restaurant"
+
         params = {
             "location": f"{latitude},{longitude}",
-            "radius":200,  # 2km radius
+            "radius": 2000,  # 2km radius
             "type": "restaurant",
-            
+            "keyword": keyword,  # Use keyword parameter
             "key": api_key
         }
 
         response = requests.get(base_url, params=params)
         data = response.json()
-        
 
         if "results" in data:
             restaurants = []
-            Locations=[]
+            locations = []
             for place in data["results"][:10]:
                 name = place.get("name", "Unknown")
                 rating = place.get("rating", "N/A")
-                latitude = place.get("geometry", {}).get("location", {}).get("lat")
-                longitude = place.get("geometry", {}).get("location", {}).get("lng")
+                lat = place.get("geometry", {}).get("location", {}).get("lat")
+                lng = place.get("geometry", {}).get("location", {}).get("lng")
                 address = place.get("vicinity", "No address provided")
                 place_id = place.get("place_id")
                 image = (
@@ -74,22 +72,21 @@ def get_nearby_restaurants(request):
                     f"?maxwidth=400&photoreference={place['photos'][0]['photo_reference']}&key={api_key}"
                     if "photos" in place else None
                 )
-                Locations.append({'title':name,'lat':latitude,'lng':longitude})
+                locations.append({'title': name, 'lat': lat, 'lng': lng})
                 
-                if not categories or any(cat.lower() in name.lower() for cat in categories):
-                    restaurants.append({
-                        "name": name,
-                        "rating": rating,
-                        "address": address,
-                        "image": image,
-                        'distance':calculate_distance(userlocation, [latitude, longitude]),
-                        "place_id": place_id
-                    })
-            return JsonResponse({"restaurants": restaurants, "locations":Locations})
+                restaurants.append({
+                    "name": name,
+                    "rating": rating,
+                    "address": address,
+                    "image": image,
+                    "place_id": place_id
+                })
+
+            return JsonResponse({"restaurants": restaurants, "locations": locations})
         
         return JsonResponse({"error": "No restaurants found"}, status=404)
 
-@login_required
+
 def restaurant_detail(request, place_id):
     reviews = Review.objects.filter(place_id=place_id)
     api_key = settings.GOOGLE_PLACES_API_KEY

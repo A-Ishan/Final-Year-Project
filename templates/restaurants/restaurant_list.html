@@ -2,7 +2,7 @@
 {% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Google Maps API (without async) -->
+<!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key={{ apikey }}"></script>
 
 <script>
@@ -11,7 +11,6 @@
     let userLongitude = null;
     var locations1 = [];
 
-    // Function to initialize the map
     function initMap() {
         if (userLatitude === null || userLongitude === null) {
             console.error("User location not set yet.");
@@ -20,7 +19,7 @@
 
         map = new google.maps.Map(document.getElementById("map"), {
             center: { lat: userLatitude, lng: userLongitude },
-            zoom: 16,
+            zoom: 14,
         });
 
         new google.maps.Marker({
@@ -30,14 +29,13 @@
         });
     }
 
-    // Fetch user location and initialize map
     function getUserLocationAndInitMap() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(position => {
                 userLatitude = position.coords.latitude;
                 userLongitude = position.coords.longitude;
 
-                initMap(); // Initialize the map after getting location
+                initMap(); // Initialize map after getting location
                 fetchRestaurants(userLatitude, userLongitude);
             }, () => alert("Geolocation not available."));
         } else {
@@ -45,31 +43,29 @@
         }
     }
 
-    // Function to fetch and display nearby restaurants
     function fetchRestaurants(latitude, longitude) {
         let selectedCategories = $(".category:checked").map(function() {
-            return this.value;
+            return $(this).val();
         }).get();
 
         $.getJSON("/restaurants/get_nearby_restaurants/", {
             latitude: latitude,
             longitude: longitude,
-            category: selectedCategories,
+            category: selectedCategories.join(","),
             search: $("#searchBox").val()
         }, function(data) {
             $("#restaurantList").empty();
-            if (data.restaurants) {
+            if (data.restaurants && data.restaurants.length > 0) {
                 data.restaurants.forEach(r => {
                     $("#restaurantList").append(`
-                        <div class="col">
+                        <div class="col-md-6">
                             <div class="card restaurant-card">
-                                ${r.image ? `<img src="${r.image}" class="card-img-top restaurant-img max-height-image" alt="Restaurant Image">` : ""}
+                                ${r.image ? `<img src="${r.image}" class="card-img-top restaurant-img" alt="Restaurant Image">` : ""}
                                 <div class="card-body">
                                     <h5 class="card-title">${r.name}</h5>
                                     <p class="card-text">Rating: ${r.rating}</p>
                                     <p class="text-muted">${r.address}</p>
                                     <a href="/restaurants/${r.place_id}" class="btn btn-primary">View Details</a>
-                                    <p>${r.distance}</p>
                                 </div>
                             </div>
                         </div>
@@ -108,18 +104,21 @@
         }
     }
 
-    // Run geolocation and map initialization on page load
     $(document).ready(() => {
         getUserLocationAndInitMap();
 
-        // Search box event listener
+        $(".category").on("change", function() {
+            if (userLatitude && userLongitude) {
+                fetchRestaurants(userLatitude, userLongitude);
+            }
+        });
+
         $("#searchBox").on("keyup", function() {
             if (userLatitude && userLongitude) {
                 fetchRestaurants(userLatitude, userLongitude);
             }
         });
 
-        // Scan Nearby Button Click
         $("#scanBtn").on("click", function() {
             if (userLatitude && userLongitude) {
                 fetchRestaurants(userLatitude, userLongitude);
@@ -147,6 +146,8 @@
     .restaurant-img {
         border-top-left-radius: 12px;
         border-top-right-radius: 12px;
+        height: 250px;
+        object-fit: cover;
     }
 
     .map-container {
@@ -160,16 +161,11 @@
         left: 50%;
         transform: translateX(-50%);
     }
-
-    .max-height-image {
-        height: 300px;
-        object-fit: cover;
-    }
 </style>
 
 <main class="container my-5">
     <div class="row">
-        <!-- Left Sidebar: Search + Categories (Checkboxes) + Filter Button -->
+        <!-- Left Sidebar: Search + Categories (Checkboxes) -->
         <div class="col-lg-3 mb-4">
             <h5 class="mb-3">Search</h5>
             <input type="text" class="form-control mb-4" placeholder="Search..." id="searchBox">
@@ -178,11 +174,10 @@
             <form method="get" action="">
                 {% for category in categories %}
                     <div class="form-check mb-2">
-                        <input class="form-check-input category" type="checkbox" name="category" value="{{ category.id }}" id="category{{ category.id }}">
+                        <input class="form-check-input category" type="checkbox" name="category" value="{{ category.name }}" id="category{{ category.id }}">
                         <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
                     </div>
                 {% endfor %}
-                <button type="submit" class="btn btn-secondary w-100 mt-3">Filter</button>
             </form>
         </div>
 
