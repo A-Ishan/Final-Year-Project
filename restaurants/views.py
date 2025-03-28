@@ -6,6 +6,41 @@ from .models import Review, catagory
 from django.contrib.auth.decorators import login_required
 from math import radians, sin, cos, sqrt, atan2
 
+
+def weighted_average_rating(place_id, google_rating):
+    reviews = Review.objects.filter(place_id=place_id)
+    if not reviews.exists():
+        return google_rating
+
+    # Separate reviews by KYC-verified and general users
+    kyc_reviews = reviews.filter(user__kyc_verified=True)
+    general_reviews = reviews.filter(user__kyc_verified=False)
+
+    # Calculate total ratings and counts
+    kyc_total_rating = sum(review.rating for review in kyc_reviews)
+    kyc_count = kyc_reviews.count()
+
+    general_total_rating = sum(review.rating for review in general_reviews)
+    general_count = general_reviews.count()
+
+    # Handle different cases based on the existence of reviews
+    if kyc_count == 0 and general_count == 0:
+        return google_rating  # Only Google rating exists
+    elif kyc_count == 0:  # No KYC-verified reviews
+        combined_rating = (general_total_rating + google_rating) / (general_count + 1)
+        return round(combined_rating, 2)
+    elif general_count == 0:  # No general user reviews
+        combined_rating = (0.6 * (kyc_total_rating / kyc_count)) + (0.4 * google_rating)
+        return round(combined_rating, 2)
+    else:  # All types of reviews exist
+        kyc_weighted = 0.6 * (kyc_total_rating / kyc_count)
+        general_weighted = 0.2 * (general_total_rating / general_count)
+        google_weighted = 0.2 * google_rating
+        combined_rating = kyc_weighted + general_weighted + google_weighted
+        return round(combined_rating, 2)
+    
+
+
 def calculate_distance(user_location, restaurant_location):
     # Radius of the Earth in meters
     EARTH_RADIUS = 6371000
@@ -77,7 +112,7 @@ def get_nearby_restaurants(request):
                 
                 restaurants.append({
                     "name": name,
-                    "rating": rating,
+                    "rating": weighted_average_rating(place_id, rating),
                     "address": address,
                     "image": image,
                     "place_id": place_id,
@@ -123,7 +158,7 @@ def restaurant_detail(request, place_id):
         restaurant = {
             "place_id": place_id,
             "name": data["result"].get("name", "Unknown"),
-            "rating": data["result"].get("rating", "N/A"),
+            "rating": weighted_average_rating(place_id, data["result"].get("rating", 0)),
             "phone": data["result"].get("formatted_phone_number", "No phone number provided"),
             "website": data["result"].get("website", "#"),
             "address": data["result"].get("formatted_address", "No address provided"),
