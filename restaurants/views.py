@@ -2,7 +2,7 @@ import requests
 from django.shortcuts import render
 from django.conf import settings
 from django.http import JsonResponse
-from .models import Review
+from .models import Review, catagory
 from django.contrib.auth.decorators import login_required
 from math import radians, sin, cos, sqrt, atan2
 
@@ -23,11 +23,13 @@ def calculate_distance(user_location, restaurant_location):
 
     # Distance in meters
     distance = EARTH_RADIUS * c
-    return distance
+    return round(distance,2)
 
 @login_required
 def restaurant_list(request):
-    return render(request, 'restaurants/restaurant_list.html') 
+    categories = catagory.objects.all()
+    api_key = settings.GOOGLE_PLACES_API_KEY
+    return render(request, 'restaurants/restaurant_list.html', {"categories": categories, "apikey": api_key}) 
 
 
 def get_nearby_restaurants(request):
@@ -59,8 +61,8 @@ def get_nearby_restaurants(request):
 
         if "results" in data:
             restaurants = []
-           
-            for place in data["results"]:
+            Locations=[]
+            for place in data["results"][:10]:
                 name = place.get("name", "Unknown")
                 rating = place.get("rating", "N/A")
                 latitude = place.get("geometry", {}).get("location", {}).get("lat")
@@ -72,6 +74,7 @@ def get_nearby_restaurants(request):
                     f"?maxwidth=400&photoreference={place['photos'][0]['photo_reference']}&key={api_key}"
                     if "photos" in place else None
                 )
+                Locations.append({'title':name,'lat':latitude,'lng':longitude})
                 
                 if not categories or any(cat.lower() in name.lower() for cat in categories):
                     restaurants.append({
@@ -82,8 +85,7 @@ def get_nearby_restaurants(request):
                         'distance':calculate_distance(userlocation, [latitude, longitude]),
                         "place_id": place_id
                     })
-
-            return JsonResponse({"restaurants": restaurants})
+            return JsonResponse({"restaurants": restaurants, "locations":Locations})
         
         return JsonResponse({"error": "No restaurants found"}, status=404)
 

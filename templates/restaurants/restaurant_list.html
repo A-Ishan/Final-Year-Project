@@ -1,106 +1,50 @@
 {% extends 'base.html' %}
 {% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    // Geolocation and fetching nearby restaurants
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-            fetchRestaurants(position.coords.latitude, position.coords.longitude);
-        }, () => alert("Geolocation not available."));
-    } else {
-        alert("Geolocation not supported!");
-    }
-</script>
-<style>
-    body {
-        background-color: #f8f9fa;
-    }
 
-    .restaurant-card {
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease-in-out;
-        min-width: 300px;
-    }
-
-    .restaurant-card:hover {
-        transform: scale(1.05);
-    }
-
-    .restaurant-img {
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-    }
-
-    .map-container {
-        position: relative;
-        height: 100%;
-    }
-
-    .scan-btn {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    .max-height-image{
-        height: 300px;
-        object-fit: cover;
-    }
-
-</style>
-
-<main class="container my-5">
-    <div class="row">
-        <!-- Left Sidebar: Search + Categories (Checkboxes) + Filter Button -->
-        <div class="col-lg-3 mb-4">
-            <!-- Search Bar -->
-            <h5 class="mb-3">Search</h5>
-            <input type="text" class="form-control mb-4" placeholder="Search..." id="searchBox">
-
-            <!-- Categories (Checkboxes) -->
-            <h5 class="mb-3">Categories</h5>
-            <form method="get" action="">
-                {% for category in categories %}
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="category" value="{{ category.id }}" id="category{{ category.id }}">
-                        <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
-                    </div>
-                {% endfor %}
-                <!-- Filter Button -->
-                <button type="submit" class="btn btn-secondary w-100 mt-3">Filter</button>
-            </form>
-        </div>
-
-        <!-- Middle Column: 10 Restaurant Items -->
-        <div class="col-lg-5 mb-4">
-            <div id="restaurantList" class="row g-4">
-                <!-- Dynamically generated restaurant cards will go here -->
-            </div>
-        </div>
-
-        <!-- Right Column: Map + "Scan Nearby" Button -->
-        <div class="col-lg-4">
-            <div class="map-container position-relative rounded shadow">
-                <div class="ratio ratio-16x9">
-                    <iframe 
-                        src="https://www.google.com/maps/embed?pb=!1m18..." 
-                        style="border:0;" 
-                        allowfullscreen 
-                        loading="lazy">
-                    </iframe>
-                </div>
-                <!-- Scan Button at Bottom Center -->
-                <button class="btn btn-primary scan-btn" id="scanBtn">
-                    Scan Nearby Restaurants
-                </button>
-            </div>
-        </div>
-    </div>
-</main>
+<!-- Google Maps API (without async) -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ apikey }}"></script>
 
 <script>
+    let map; // Global map instance
+    let userLatitude = null;
+    let userLongitude = null;
+    var locations1 = [];
+
+    // Function to initialize the map
+    function initMap() {
+        if (userLatitude === null || userLongitude === null) {
+            console.error("User location not set yet.");
+            return;
+        }
+
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: { lat: userLatitude, lng: userLongitude },
+            zoom: 16,
+        });
+
+        new google.maps.Marker({
+            position: { lat: userLatitude, lng: userLongitude },
+            map: map,
+            title: "You are here",
+        });
+    }
+
+    // Fetch user location and initialize map
+    function getUserLocationAndInitMap() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                userLatitude = position.coords.latitude;
+                userLongitude = position.coords.longitude;
+
+                initMap(); // Initialize the map after getting location
+                fetchRestaurants(userLatitude, userLongitude);
+            }, () => alert("Geolocation not available."));
+        } else {
+            alert("Geolocation not supported!");
+        }
+    }
+
     // Function to fetch and display nearby restaurants
     function fetchRestaurants(latitude, longitude) {
         let selectedCategories = $(".category:checked").map(function() {
@@ -134,28 +78,131 @@
             } else {
                 $("#restaurantList").html("<p class='text-center text-danger'>No restaurants found.</p>");
             }
+            if (data.locations) {
+                locations1 = data.locations;
+                addMarkersToMap(locations1);
+            }
         }).fail(() => alert("Failed to fetch restaurants!"));
     }
 
-    // "Scan Nearby" button click event
-    $("#scanBtn").click(function() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                fetchRestaurants(position.coords.latitude, position.coords.longitude);
-            }, () => alert("Geolocation not available."));
-        } else {
-            alert("Geolocation not supported!");
+    function addMarkersToMap(locations) {
+        if (!map) {
+            console.error("Map is not initialized yet.");
+            return;
         }
-    });
 
-    // Adding real-time search filtering functionality
-    $("#searchBox").on("keyup", function() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                fetchRestaurants(position.coords.latitude, position.coords.longitude);
-            }, () => alert("Geolocation not available."));
+        if (locations && locations.length > 0) {
+            locations.forEach((location) => {
+                if (location.lat && location.lng) {
+                    new google.maps.Marker({
+                        position: { lat: location.lat, lng: location.lng },
+                        map: map,
+                        title: location.title || "No title available",
+                    });
+                } else {
+                    console.warn("Invalid location data:", location);
+                }
+            });
+        } else {
+            console.warn("No locations available to display on the map.");
         }
+    }
+
+    // Run geolocation and map initialization on page load
+    $(document).ready(() => {
+        getUserLocationAndInitMap();
+
+        // Search box event listener
+        $("#searchBox").on("keyup", function() {
+            if (userLatitude && userLongitude) {
+                fetchRestaurants(userLatitude, userLongitude);
+            }
+        });
+
+        // Scan Nearby Button Click
+        $("#scanBtn").on("click", function() {
+            if (userLatitude && userLongitude) {
+                fetchRestaurants(userLatitude, userLongitude);
+            }
+        });
     });
 </script>
+
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+
+    .restaurant-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease-in-out;
+        min-width: 300px;
+    }
+
+    .restaurant-card:hover {
+        transform: scale(1.05);
+    }
+
+    .restaurant-img {
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+    }
+
+    .map-container {
+        position: relative;
+        height: 100%;
+    }
+
+    .scan-btn {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .max-height-image {
+        height: 300px;
+        object-fit: cover;
+    }
+</style>
+
+<main class="container my-5">
+    <div class="row">
+        <!-- Left Sidebar: Search + Categories (Checkboxes) + Filter Button -->
+        <div class="col-lg-3 mb-4">
+            <h5 class="mb-3">Search</h5>
+            <input type="text" class="form-control mb-4" placeholder="Search..." id="searchBox">
+
+            <h5 class="mb-3">Categories</h5>
+            <form method="get" action="">
+                {% for category in categories %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input category" type="checkbox" name="category" value="{{ category.id }}" id="category{{ category.id }}">
+                        <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-secondary w-100 mt-3">Filter</button>
+            </form>
+        </div>
+
+        <!-- Middle Column: Restaurant List -->
+        <div class="col-lg-5 mb-4">
+            <div id="restaurantList" class="row g-4">
+                <!-- Dynamically generated restaurant cards will go here -->
+            </div>
+        </div>
+
+        <!-- Right Column: Map + "Scan Nearby" Button -->
+        <div class="col-lg-4">
+            <div class="map-container position-relative rounded shadow">
+                <div id="map" style="height: 400px;"></div>
+                <button class="btn btn-primary scan-btn" id="scanBtn">
+                    Scan Nearby Restaurants
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
 
 {% endblock %}
