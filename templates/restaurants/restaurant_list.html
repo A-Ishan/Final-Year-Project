@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key={{ apikey }}"></script>
 
 <script>
-    let map; // Global map instance
+    let map;
     let userLatitude = null;
     let userLongitude = null;
     var locations1 = [];
@@ -20,11 +18,18 @@
         map = new google.maps.Map(document.getElementById("map"), {
             center: { lat: userLatitude, lng: userLongitude },
             zoom: 14,
+            styles: [
+                { "featureType": "water", "stylers": [{ "color": "#46bcec" }, { "visibility": "on" }] },
+                { "featureType": "landscape", "stylers": [{ "color": "#f2f2f2" }] },
+                { "featureType": "road", "stylers": [{ "saturation": -100 }, { "lightness": 45 }] },
+                { "featureType": "poi", "stylers": [{ "visibility": "off" }] }
+            ]
         });
 
         new google.maps.Marker({
             position: { lat: userLatitude, lng: userLongitude },
             map: map,
+            icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
             title: "You are here",
         });
     }
@@ -34,8 +39,7 @@
             navigator.geolocation.getCurrentPosition(position => {
                 userLatitude = position.coords.latitude;
                 userLongitude = position.coords.longitude;
-
-                initMap(); // Initialize map after getting location
+                initMap();
                 fetchRestaurants(userLatitude, userLongitude);
             }, () => alert("Geolocation not available."));
         } else {
@@ -47,25 +51,27 @@
         let selectedCategories = $(".category:checked").map(function() {
             return $(this).val();
         }).get();
+        
+        let searchQuery = $("#searchBox").val().trim();
 
         $.getJSON("/restaurants/get_nearby_restaurants/", {
             latitude: latitude,
             longitude: longitude,
             category: selectedCategories.join(","),
-            search: $("#searchBox").val()
+            keyword: searchQuery // Send search query
         }, function(data) {
             $("#restaurantList").empty();
             if (data.restaurants && data.restaurants.length > 0) {
                 data.restaurants.forEach(r => {
                     $("#restaurantList").append(`
                         <div class="col-md-6">
-                            <div class="card restaurant-card">
+                            <div class="card restaurant-card border-0 shadow-sm">
                                 ${r.image ? `<img src="${r.image}" class="card-img-top restaurant-img" alt="Restaurant Image">` : ""}
                                 <div class="card-body">
                                     <h5 class="card-title">${r.name}</h5>
-                                    <p class="card-text">Rating: ${r.rating}</p>
-                                    <p class="text-muted">${r.address}</p>
-                                    <a href="/restaurants/${r.place_id}" class="btn btn-primary">View Details</a>
+                                    <p class="card-text">⭐ ${r.rating}</p>
+                                    <p class="text-muted">📍 ${r.address}</p>
+                                    <a href="/restaurants/${r.place_id}" class="btn btn-outline-primary btn-sm">View Details</a>
                                 </div>
                             </div>
                         </div>
@@ -87,42 +93,34 @@
             return;
         }
 
-        if (locations && locations.length > 0) {
-            locations.forEach((location) => {
-                if (location.lat && location.lng) {
-                    new google.maps.Marker({
-                        position: { lat: location.lat, lng: location.lng },
-                        map: map,
-                        title: location.title || "No title available",
-                    });
-                } else {
-                    console.warn("Invalid location data:", location);
-                }
-            });
-        } else {
-            console.warn("No locations available to display on the map.");
-        }
+        locations.forEach((location) => {
+            if (location.lat && location.lng) {
+                new google.maps.Marker({
+                    position: { lat: location.lat, lng: location.lng },
+                    map: map,
+                    title: location.title || "No title available",
+                });
+            }
+        });
     }
 
     $(document).ready(() => {
         getUserLocationAndInitMap();
 
         $(".category").on("change", function() {
-            if (userLatitude && userLongitude) {
-                fetchRestaurants(userLatitude, userLongitude);
-            }
+            fetchRestaurants(userLatitude, userLongitude);
         });
 
         $("#searchBox").on("keyup", function() {
-            if (userLatitude && userLongitude) {
-                fetchRestaurants(userLatitude, userLongitude);
-            }
+            fetchRestaurants(userLatitude, userLongitude);
+        });
+
+        $("#searchBtn").on("click", function() {
+            fetchRestaurants(userLatitude, userLongitude);
         });
 
         $("#scanBtn").on("click", function() {
-            if (userLatitude && userLongitude) {
-                fetchRestaurants(userLatitude, userLongitude);
-            }
+            fetchRestaurants(userLatitude, userLongitude);
         });
     });
 </script>
@@ -130,74 +128,68 @@
 <style>
     body {
         background-color: #f8f9fa;
+        font-family: 'Poppins', sans-serif;
     }
 
     .restaurant-card {
         border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease-in-out;
-        min-width: 300px;
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
     }
 
     .restaurant-card:hover {
-        transform: scale(1.05);
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
     }
 
     .restaurant-img {
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-        height: 250px;
+        height: 200px;
         object-fit: cover;
     }
 
     .map-container {
         position: relative;
-        height: 100%;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
 
     .scan-btn {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
+        width: 100%;
+        margin-top: 10px;
     }
 </style>
 
 <main class="container my-5">
     <div class="row">
-        <!-- Left Sidebar: Search + Categories (Checkboxes) -->
         <div class="col-lg-3 mb-4">
             <h5 class="mb-3">Search</h5>
-            <input type="text" class="form-control mb-4" placeholder="Search..." id="searchBox">
+            <div class="input-group mb-4">
+                <input type="text" class="form-control" placeholder="Search..." id="searchBox">
+                <button class="btn btn-primary" id="searchBtn">Search</button>
+            </div>
 
             <h5 class="mb-3">Categories</h5>
-            <form method="get" action="">
+            <form>
                 {% for category in categories %}
-                    <div class="form-check mb-2">
-                        <input class="form-check-input category" type="checkbox" name="category" value="{{ category.name }}" id="category{{ category.id }}">
+                    <div class="form-check">
+                        <input class="form-check-input category" type="checkbox" value="{{ category.name }}" id="category{{ category.id }}">
                         <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
                     </div>
                 {% endfor %}
             </form>
         </div>
 
-        <!-- Middle Column: Restaurant List -->
         <div class="col-lg-5 mb-4">
-            <div id="restaurantList" class="row g-4">
-                <!-- Dynamically generated restaurant cards will go here -->
-            </div>
+            <div id="restaurantList" class="row g-4"></div>
         </div>
 
-        <!-- Right Column: Map + "Scan Nearby" Button -->
         <div class="col-lg-4">
-            <div class="map-container position-relative rounded shadow">
+            <div class="map-container">
                 <div id="map" style="height: 400px;"></div>
-                <button class="btn btn-primary scan-btn" id="scanBtn">
-                    Scan Nearby Restaurants
-                </button>
+                <button class="btn btn-primary scan-btn" id="scanBtn">Scan Nearby Restaurants</button>
             </div>
         </div>
     </div>
 </main>
-
 {% endblock %}

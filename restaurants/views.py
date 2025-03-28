@@ -36,6 +36,7 @@ def get_nearby_restaurants(request):
         latitude = request.GET.get("latitude")
         longitude = request.GET.get("longitude")
         categories = request.GET.getlist("category")  # List of selected categories
+        keyword = request.GET.get("keyword", "").strip()  # Get search keyword
 
         if not latitude or not longitude:
             return JsonResponse({"error": "Location not provided"}, status=400)
@@ -43,14 +44,14 @@ def get_nearby_restaurants(request):
         api_key = settings.GOOGLE_PLACES_API_KEY
         base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 
-        # Convert category names into a single keyword string
-        keyword = ",".join(categories) if categories else "restaurant"
+        # Use keyword if provided; otherwise, default to "restaurant"
+        search_keyword = keyword if keyword else ",".join(categories) if categories else "restaurant"
 
         params = {
             "location": f"{latitude},{longitude}",
             "radius": 2000,  # 2km radius
             "type": "restaurant",
-            "keyword": keyword,  # Use keyword parameter
+            "keyword": search_keyword,  # Apply search keyword
             "key": api_key
         }
 
@@ -85,8 +86,8 @@ def get_nearby_restaurants(request):
             return JsonResponse({"restaurants": restaurants, "locations": locations})
         
         return JsonResponse({"error": "No restaurants found"}, status=404)
-
-
+    
+    
 def restaurant_detail(request, place_id):
     reviews = Review.objects.filter(place_id=place_id)
     api_key = settings.GOOGLE_PLACES_API_KEY
