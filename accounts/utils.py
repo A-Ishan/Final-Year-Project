@@ -15,3 +15,4 @@ def send_otp(phone_number, otp):
     }
     response = requests.post(url, data=payload)
     return response.status_code == 200
+    
