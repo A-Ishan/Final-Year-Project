@@ -25,7 +25,7 @@
             </div>
             <!-- Slide 3 -->
             <div class="carousel-item">
-                <img src="{% static 'images/Italian_dish.jpg' %}" class="d-block w-100 rounded" alt="Italian Cuisine">
+                <img src="{% static 'images/Sekuwa.png' %}" class="d-block w-100 rounded" alt="Italian Cuisine">
                 <div class="carousel-caption d-none d-md-block">
                     <h3 class="display-4 text-shadow">A Taste of Italy</h3>
                     <p class="lead">Enjoy the most delicious Italian dishes, prepared with authentic ingredients.</p>
@@ -61,90 +61,26 @@
             <div class="col-lg-8">
                 <h2 class="mb-4">Best Picks</h2>
                 <div class="row row-cols-1 row-cols-md-3 g-4">
-                    <!-- Restaurant Card 1 -->
+                    {% for restaurant in restaurants %}
                     <div class="col">
-                        <!-- Wrap the card in an anchor to make it clickable -->
-                        <a href="RestaurantDetails.html" class="text-decoration-none text-dark">
+                        <a href="https://www.google.com/maps/place/?q=place_id:{{ restaurant.place_id }}" 
+                           target="_blank" class="text-decoration-none text-dark">
                             <div class="card h-100 restaurant-card">
-                                <img src="{% static 'images/Sekuwa.png' %}" class="card-img-top" alt="Restaurant">
+                                {% if restaurant.photo %}
+                                <img src="https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={{ restaurant.photo }}&key={{ api_key }}"
+                                     class="card-img-top" alt="{{ restaurant.name }}">
+                                {% else %}
+                                <img src="{% static 'images/default_restaurant.jpg' %}" class="card-img-top" alt="{{ restaurant.name }}">
+                                {% endif %}
                                 <div class="card-body">
-                                    <h5 class="card-title">Premium Restaurant</h5>
-                                    <p class="card-text">⭐ 4.5 (500+ reviews)</p>
-                                    <p class="card-text">Italian • $$ • Open Now</p>
+                                    <h5 class="card-title">{{ restaurant.name }}</h5>
+                                    <p class="card-text">⭐ {{ restaurant.rating }} ({{ restaurant.user_ratings_total }} reviews)</p>
+                                    <p class="card-text">{{ restaurant.address }}</p>
                                 </div>
                             </div>
                         </a>
                     </div>
-                    
-                    <!-- Restaurant Card 2 -->
-                    <div class="col">
-                        <a href="RestaurantDetails.html" class="text-decoration-none text-dark">
-                            <div class="card h-100 restaurant-card">
-                                <img src="{% static 'images/Sekuwa.png' %}" class="card-img-top" alt="Restaurant">
-                                <div class="card-body">
-                                    <h5 class="card-title">Seafood Paradise</h5>
-                                    <p class="card-text">⭐ 4.7 (320+ reviews)</p>
-                                    <p class="card-text">Seafood • $$$ • Open Now</p>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Restaurant Card 3 -->
-                    <div class="col">
-                        <a href="RestaurantDetails.html" class="text-decoration-none text-dark">
-                            <div class="card h-100 restaurant-card">
-                                <img src="{% static 'images/Sekuwa.png' %}" class="card-img-top" alt="Restaurant">
-                                <div class="card-body">
-                                    <h5 class="card-title">Urban Spice</h5>
-                                    <p class="card-text">⭐ 4.3 (450+ reviews)</p>
-                                    <p class="card-text">Indian • $$ • Open Now</p>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Restaurant Card 4 -->
-                    <div class="col">
-                        <a href="RestaurantDetails.html" class="text-decoration-none text-dark">
-                            <div class="card h-100 restaurant-card">
-                                <img src="{% static 'images/Sekuwa.png' %}" class="card-img-top" alt="Restaurant">
-                                <div class="card-body">
-                                    <h5 class="card-title">Sushi Master</h5>
-                                    <p class="card-text">⭐ 4.8 (600+ reviews)</p>
-                                    <p class="card-text">Japanese • $$$ • Open Now</p>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Restaurant Card 5 -->
-                    <div class="col">
-                        <a href="RestaurantDetails.html" class="text-decoration-none text-dark">
-                            <div class="card h-100 restaurant-card">
-                                <img src="{% static 'images/Sekuwa.png' %}" class="card-img-top" alt="Restaurant">
-                                <div class="card-body">
-                                    <h5 class="card-title">Taco Haven</h5>
-                                    <p class="card-text">⭐ 4.2 (380+ reviews)</p>
-                                    <p class="card-text">Mexican • $ • Open Now</p>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    
-                    <!-- Restaurant Card 6 -->
-                    <div class="col">
-                        <a href="RestaurantDetails.html" class="text-decoration-none text-dark">
-                            <div class="card h-100 restaurant-card">
-                                <img src="{% static 'images/Sekuwa.png' %}" class="card-img-top" alt="Restaurant">
-                                <div class="card-body">
-                                    <h5 class="card-title">Parisian Bistro</h5>
-                                    <p class="card-text">⭐ 4.6 (420+ reviews)</p>
-                                    <p class="card-text">French • $$$$ • Open Now</p>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
@@ -152,14 +88,7 @@
             <div class="col-lg-4">
                 <div class="map-container bg-light p-3 rounded shadow">
                     <h3 class="mb-3">Find Us</h3>
-                    <div class="ratio ratio-1x1">
-                        <iframe 
-                            src="https://www.google.com/maps/embed?pb=!1m18..." 
-                            style="border:0;" 
-                            allowfullscreen 
-                            loading="lazy">
-                        </iframe>
-                    </div>
+                    <div id="map" style="height: 400px; width: 100%;"></div>
                 </div>
             </div>
         </div>
@@ -235,4 +164,52 @@
 }
 
     </style>
+<script>
+    function initMap() {
+        var kathmandu = { lat: 27.7172, lng: 85.3240 }; // Default center
+
+        var map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 12,
+            center: kathmandu,
+        });
+
+        var restaurants = [
+            {% for restaurant in restaurants %}
+                {
+                    name: "{{ restaurant.name|escapejs }}",
+                    lat: {{ restaurant.lat }},
+                    lng: {{ restaurant.lng }},
+                    address: "{{ restaurant.address|escapejs }}",
+                    rating: "{{ restaurant.rating }}",
+                    place_id: "{{ restaurant.place_id }}"
+                },
+            {% endfor %}
+        ];
+
+        // Add markers
+        restaurants.forEach((restaurant) => {
+            var marker = new google.maps.Marker({
+                position: { lat: restaurant.lat, lng: restaurant.lng },
+                map: map,
+                title: restaurant.name,
+            });
+
+            // Info Window
+            var infoWindow = new google.maps.InfoWindow({
+                content: `<h6>${restaurant.name}</h6>
+                          <p>⭐ ${restaurant.rating} | 📍 ${restaurant.address}</p>
+                          <a href="https://www.google.com/maps/place/?q=place_id:${restaurant.place_id}" 
+                             target="_blank">View on Google Maps</a>`,
+            });
+
+            marker.addListener("click", function () {
+                infoWindow.open(map, marker);
+            });
+        });
+    }
+</script>
+
+<!-- Load Google Maps API -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap"></script>
+
 {% endblock %} 

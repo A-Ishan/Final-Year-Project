@@ -84,7 +84,7 @@ def get_nearby_restaurants(request):
 
         params = {
             "location": f"{latitude},{longitude}",
-            "radius": 1000,  # 2km radius
+            "radius": 500,  
             "type": "restaurant",
             "keyword": search_keyword,  # Apply search keyword
             "key": api_key
