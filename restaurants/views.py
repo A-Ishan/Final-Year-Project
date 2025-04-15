@@ -1,14 +1,15 @@
-import requests
-from django.shortcuts import render
-from django.conf import settings
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from .models import Review, catagory
 from django.contrib.auth.decorators import login_required
 from math import radians, sin, cos, sqrt, atan2
+from .models import Review, Category, Restaurant, RestaurantReview
+from django.conf import settings
 
-
-def weighted_average_rating(place_id, google_rating):
-    reviews = Review.objects.filter(place_id=place_id)
+def weighted_average_rating(restaurant):
+    # Get all reviews for this restaurant through the intermediate model
+    reviews = Review.objects.filter(restaurants=restaurant)
+    google_rating = restaurant.google_rating
+    
     if not reviews.exists():
         return google_rating
 
@@ -38,8 +39,6 @@ def weighted_average_rating(place_id, google_rating):
         google_weighted = 0.2 * google_rating
         combined_rating = kyc_weighted + general_weighted + google_weighted
         return round(combined_rating, 2)
-    
-
 
 def calculate_distance(user_location, restaurant_location):
     # Radius of the Earth in meters
@@ -58,121 +57,125 @@ def calculate_distance(user_location, restaurant_location):
 
     # Distance in meters
     distance = EARTH_RADIUS * c
-    return round(distance,2)
+    return round(distance, 2)
 
 @login_required
 def restaurant_list(request):
-    categories = catagory.objects.all()
-    api_key = settings.GOOGLE_PLACES_API_KEY
-    return render(request, 'restaurants/restaurant_list.html', {"categories": categories, "apikey": api_key})
+    categories = Category.objects.all()  # Updated class name
+    return render(request, 'restaurants/restaurant_list.html', {"categories": categories})
 
 def get_nearby_restaurants(request):
     if request.method == "GET":
         latitude = request.GET.get("latitude")
         longitude = request.GET.get("longitude")
-        categories = request.GET.getlist("category")  # List of selected categories
+        category_ids = request.GET.getlist("category")  # List of selected category IDs
         keyword = request.GET.get("keyword", "").strip()  # Get search keyword
 
         if not latitude or not longitude:
             return JsonResponse({"error": "Location not provided"}, status=400)
-        userlocation=[float(latitude), float(longitude)]
-        api_key = settings.GOOGLE_PLACES_API_KEY
-        base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-
-        # Use keyword if provided; otherwise, default to "restaurant"
-        search_keyword = keyword if keyword else ",".join(categories) if categories else "restaurant"
-
-        params = {
-            "location": f"{latitude},{longitude}",
-            "radius": 500,  
-            "type": "restaurant",
-            "keyword": search_keyword,  # Apply search keyword
-            "key": api_key
-        }
-
-        response = requests.get(base_url, params=params)
-        data = response.json()
-
-        if "results" in data:
-            restaurants = []
-            locations = []
-            for place in data["results"][:10]:
-                name = place.get("name", "Unknown")
-                rating = place.get("rating", "N/A")
-                lat = place.get("geometry", {}).get("location", {}).get("lat")
-                lng = place.get("geometry", {}).get("location", {}).get("lng")
-                address = place.get("vicinity", "No address provided")
-                place_id = place.get("place_id")
-                image = (
-                    f"https://maps.googleapis.com/maps/api/place/photo"
-                    f"?maxwidth=400&photoreference={place['photos'][0]['photo_reference']}&key={api_key}"
-                    if "photos" in place else None
-                )
-                locations.append({'title': name, 'lat': lat, 'lng': lng})
-                
-                restaurants.append({
-                    "name": name,
-                    "rating": weighted_average_rating(place_id, rating),
-                    "address": address,
-                    "image": image,
-                    "place_id": place_id,
-                    "distance": calculate_distance(userlocation, [lat, lng]),
-                })
-
-            return JsonResponse({"restaurants": restaurants, "locations": locations})
         
-        return JsonResponse({"error": "No restaurants found"}, status=404)
+        user_location = [float(latitude), float(longitude)]
+        
+        # Start with all restaurants
+        restaurants_query = Restaurant.objects.all()
+        
+        # Filter by category if specified
+        if category_ids:
+            restaurants_query = restaurants_query.filter(categories__id__in=category_ids).distinct()
+        
+        # Filter by keyword if specified
+        if keyword:
+            restaurants_query = restaurants_query.filter(name__icontains=keyword)
+        
+        # Get restaurants within approximately 500m radius
+        # This is a rough filter - we'll calculate exact distances next
+        max_lat_diff = 0.005  # Approximately 500m in latitude
+        max_lon_diff = 0.005  # Approximately 500m in longitude (varies by latitude)
+        restaurants_query = restaurants_query.filter(
+            latitude__range=(float(latitude) - max_lat_diff, float(latitude) + max_lat_diff),
+            longitude__range=(float(longitude) - max_lon_diff, float(longitude) + max_lon_diff)
+        )
+        
+        restaurants_data = []
+        locations = []
+        
+        # Process up to 10 restaurants
+        for restaurant in restaurants_query[:10]:
+            # Calculate exact distance
+            distance = calculate_distance(
+                user_location, 
+                [restaurant.latitude, restaurant.longitude]
+            )
+            
+            # Skip if beyond 500m (after precise calculation)
+            if distance > 500:
+                continue
+                
+            # Calculate weighted rating
+            weighted_rating = weighted_average_rating(restaurant)
+            
+            locations.append({
+                'title': restaurant.name, 
+                'lat': restaurant.latitude, 
+                'lng': restaurant.longitude
+            })
+            
+            restaurants_data.append({
+                "name": restaurant.name,
+                "rating": weighted_rating,
+                "image": restaurant.image,
+                "place_id": restaurant.place_id,
+                "price_level": restaurant.price_level,
+                "distance": distance,
+            })
+
+        return JsonResponse({"restaurants": restaurants_data, "locations": locations})
     
+    return JsonResponse({"error": "Invalid request method"}, status=400)
     
+@login_required
 def restaurant_detail(request, place_id):
-    reviews = Review.objects.filter(place_id=place_id)
-    api_key = settings.GOOGLE_PLACES_API_KEY
-    base_url = "https://maps.googleapis.com/maps/api/place/details/json"
-
-    params = {
-        "place_id": place_id,
-        "fields": "name,rating,formatted_phone_number,website,formatted_address,photos,price_level",
-        "key": api_key
-    }
-
-    response = requests.get(base_url, params=params)
-    data = response.json()
-    map_embed_url = f"https://www.google.com/maps/embed/v1/place?q=place_id:{place_id}&key={settings.GOOGLE_PLACES_API_KEY}"
+    restaurant = get_object_or_404(Restaurant, place_id=place_id)
+    reviews = Review.objects.filter(restaurants=restaurant)
+    
     if request.method == "POST":
-        place_id1 = request.POST.get("place_id")
         review_text = request.POST.get("review")
         rating = request.POST.get("rating")
         user = request.user
 
-        if not place_id or not review_text or not rating:
+        if not review_text or not rating:
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
-        Review.objects.create(
-            place_id=place_id1,
+        # Create the review
+        new_review = Review.objects.create(
+            place_id=place_id,
             user=user,
             review_text=review_text,
-            rating=rating
+            rating=int(rating)
+        )
+        
+        # Connect the review to the restaurant
+        RestaurantReview.objects.create(
+            restaurant=restaurant,
+            review=new_review
         )
 
-    if "result" in data:
-        restaurant = {
-            "place_id": place_id,
-            "name": data["result"].get("name", "Unknown"),
-            "rating": weighted_average_rating(place_id, data["result"].get("rating", 0)),
-            "phone": data["result"].get("formatted_phone_number", "No phone number provided"),
-            "website": data["result"].get("website", "#"),
-            "address": data["result"].get("formatted_address", "No address provided"),
-            "price_level": data["result"].get("price_level", "N/A"),
-            "image": (
-                f"https://maps.googleapis.com/maps/api/place/photo"
-                f"?maxwidth=400&photoreference={data['result']['photos'][0]['photo_reference']}&key={api_key}"
-                if "photos" in data["result"] else None
-            )
-        }
-        
-        return render(request, 'restaurants/restaurants_detail.html', {"restaurant": restaurant, "reviews": reviews, "map_embed_url": map_embed_url})
-
-    return JsonResponse({"error": "Restaurant not found"}, status=404)
-
-
-
+    weighted_rating = weighted_average_rating(restaurant)
+    
+    # Prepare map embed URL
+    map_embed_url = f"https://www.google.com/maps/embed/v1/place?q=place_id:{place_id}&key={settings.GOOGLE_PLACES_API_KEY}"
+    
+    restaurant_data = {
+        "place_id": restaurant.place_id,
+        "name": restaurant.name,
+        "rating": weighted_rating,
+        "address": "",  # You might want to add an address field to your Restaurant model
+        "price_level": restaurant.price_level,
+        "image": restaurant.image,
+    }
+    
+    return render(request, 'restaurants/restaurants_detail.html', {
+        "restaurant": restaurant_data,
+        "reviews": reviews,
+        "map_embed_url": map_embed_url
+    })
