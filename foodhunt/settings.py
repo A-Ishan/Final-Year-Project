@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'accounts',
     'restaurants',
     'widget_tweaks',
+    'home',
 ]
 
 MIDDLEWARE = [
@@ -80,10 +81,14 @@ WSGI_APPLICATION = 'foodhunt.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
+    # postgres config
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': "mydb1",
-    }
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('POSTGRES_DB', default='foodhunt'),
+        'USER': config('POSTGRES_USER', default='postgres'),
+        'PASSWORD': config('POSTGRES_PASSWORD', default=''),
+        'HOST': config('POSTGRES_HOST', default='localhost'),
+        'PORT': config('POSTGRES_PORT', default='5432'),}
 }
 
 
@@ -135,8 +140,7 @@ MEDIAFILES_DIRS = '/media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # API CONFIG
-SPARROW_SMS_TOKEN = config('SPARROW_SMS_TOKEN', default='')
-SPARROW_SMS_FROM = config('SPARROW_SMS_FROM', default='')
+AAKASH_SMS_TOKEN = config('AAKASH_SMS_TOKEN', default='')
 GOOGLE_PLACES_API_KEY = config('GOOGLE_PLACES_API_KEY', default='')
 
 LOGIN_URL = '/auth/login/'

@@ -30,10 +30,10 @@ class Category(models.Model):
 class Restaurant(models.Model):
     
     place_id = models.CharField(max_length=255, unique=True)  
-    name = models.CharField(max_length=255)  
+    name = models.CharField(max_length=500)  
     latitude = models.FloatField()  
     longitude = models.FloatField()  
-    image = models.URLField()  
+    image = models.URLField(max_length=1000, blank=True)  
     price_level = models.CharField(max_length=50) 
     google_rating = models.FloatField()  
     number_of_reviews = models.PositiveIntegerField() 

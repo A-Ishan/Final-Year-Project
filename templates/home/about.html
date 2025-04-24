@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  .about-section {
+    padding: 60px 0;
+  }
+
+  .about-heading {
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #343a40;
+  }
+
+  .about-subheading {
+    font-size: 1.1rem;
+    color: #6c757d;
+  }
+
+  .about-feature {
+    margin-top: 40px;
+  }
+
+  .about-icon {
+    font-size: 2rem;
+    color: #0d6efd;
+    margin-right: 15px;
+  }
+
+  .about-card {
+    border-radius: 12px;
+    background-color: #f8f9fa;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease;
+  }
+
+  .about-card:hover {
+    transform: translateY(-5px);
+  }
+</style>
+
+<main class="container about-section">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 text-center">
+      <h2 class="about-heading">About Our Platform</h2>
+      <p class="about-subheading">
+        Discover, explore, and experience the best restaurants around you with ease.
+        Whether you’re craving local flavors or looking to try something new, our platform helps you find top-rated and nearby dining spots tailored to your taste.
+      </p>
+    </div>
+  </div>
+
+  <div class="row mt-5 g-4">
+    <div class="col-md-4">
+      <div class="about-card d-flex align-items-start">
+        <i class="fas fa-map-marked-alt about-icon"></i>
+        <div>
+          <h5>Location-Based Scanning</h5>
+          <p>Get the best nearby restaurants instantly using your live location.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="about-card d-flex align-items-start">
+        <i class="fas fa-star about-icon"></i>
+        <div>
+          <h5>Top Rated Listings</h5>
+          <p>Access the top 10 restaurants in each category, curated by rating and reviews.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="about-card d-flex align-items-start">
+        <i class="fas fa-search about-icon"></i>
+        <div>
+          <h5>Smart Filters</h5>
+          <p>Search by keywords and food types to find exactly what you’re looking for.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-5">
+    <div class="col-lg-10 mx-auto text-center">
+      <h4>Our Mission</h4>
+      <p class="about-subheading">
+        We aim to enhance your dining experience by making restaurant discovery faster, smarter, and more personalized. 
+        Whether you're a foodie or just hungry, we help you make delicious decisions.
+      </p>
+    </div>
+  </div>
+</main>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+{% endblock %}

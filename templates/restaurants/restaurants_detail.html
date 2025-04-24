@@ -3,40 +3,53 @@
 {% block content %}
 
 <main class="container my-5">
-    <!-- Restaurant Header -->
-    <div class="card shadow-lg mb-4">
+    <!-- Restaurant Header Card with Enhanced Styling -->
+    <div class="card shadow-lg mb-5 border-0 overflow-hidden">
         <div class="row g-0">
-            <!-- Restaurant Image -->
-            <div class="col-md-5">
-                <img src="{{ restaurant.image }}" class="img-fluid rounded-start" alt="Restaurant Image">
+            <!-- Restaurant Image with Fixed Height for Consistency -->
+            <div class="col-md-5 position-relative">
+                <div style="height: 350px; overflow: hidden;">
+                    <img src="{{ restaurant.image }}" class="img-fluid w-100 h-100 object-cover" alt="{{ restaurant.name }}" style="object-position: center;">
+                </div>
             </div>
-            <!-- Restaurant Info -->
+            <!-- Restaurant Info with Improved Layout -->
             <div class="col-md-7">
-                <div class="card-body">
-                    <h2 class="restaurant-name mb-3">{{ restaurant.name }}</h2>
-                    <p class="mb-2"><i class="bi bi-geo-alt-fill"></i> <strong>Location:</strong> {{ restaurant.address }}</p>
-                    <p class="mb-2"><i class="bi bi-cash-stack"></i> <strong>Price Tier:</strong> {{ restaurant.price_level }}</p>
-                    <p class="mb-2"><i class="bi bi-star-fill text-warning"></i> <strong>Rating:</strong> {{ restaurant.rating }}</p>
+                <div class="card-body p-4 p-md-5 h-100 d-flex flex-column justify-content-center">
+                    <h2 class="restaurant-name mb-4 fw-bold">{{ restaurant.name }}</h2>
+                    <div class="restaurant-details">
+                        <p class="mb-3 d-flex align-items-center">
+                            <i class="bi bi-geo-alt-fill text-primary me-2"></i> 
+                            <span><strong class="text-secondary">Location:</strong> {{ restaurant.address }}</span>
+                        </p>
+                        <p class="mb-3 d-flex align-items-center">
+                            <i class="bi bi-cash-stack text-success me-2"></i> 
+                            <span><strong class="text-secondary">Price Tier:</strong> {{ restaurant.price_level }}</span>
+                        </p>
+                        <p class="mb-3 d-flex align-items-center">
+                            <i class="bi bi-star-fill text-warning me-2"></i> 
+                            <span><strong class="text-secondary">Rating:</strong> {{ restaurant.rating }}</span>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="row">
-        <!-- Left Column: Reviews -->
+    <!-- Main Content with Improved Spacing and Shadows -->
+    <div class="row g-4">
+        <!-- Left Column: Reviews with Enhanced Design -->
         <div class="col-lg-8">
-            <div class="card shadow-sm p-4">
-                <h4 class="mb-4">Customer Reviews</h4>
+            <div class="card shadow-sm border-0 rounded-3 p-4">
+                <h4 class="mb-4 fw-bold border-bottom pb-3">Customer Reviews</h4>
 
-                <!-- Review Form -->
-                <form method="POST" action="">
+                <!-- Review Form with Better Styling -->
+                <form method="POST" action="" class="bg-light p-4 rounded-3 mb-4">
                     {% csrf_token %}
                     <input type="hidden" name="place_id" value="{{ restaurant.place_id }}">
 
                     <div class="mb-3">
-                        <label for="rating" class="form-label">Your Rating</label>
-                        <select class="form-select" id="rating" name="rating" required>
+                        <label for="rating" class="form-label fw-bold">Your Rating</label>
+                        <select class="form-select border-0 shadow-sm" id="rating" name="rating" required>
                             <option value="5">⭐⭐⭐⭐⭐ - Excellent</option>
                             <option value="4">⭐⭐⭐⭐ - Very Good</option>
                             <option value="3">⭐⭐⭐ - Good</option>
@@ -46,39 +59,88 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="review" class="form-label">Your Review</label>
-                        <textarea class="form-control" id="review" name="review" rows="3" placeholder="Write your experience..." required></textarea>
+                        <label for="review" class="form-label fw-bold">Your Review</label>
+                        <textarea class="form-control border-0 shadow-sm" id="review" name="review" rows="3" placeholder="Share your dining experience..." required></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Submit Review</button>
                 </form>
 
-                <!-- Display Reviews -->
+                <!-- Display Reviews with Enhanced Styling -->
                 <div class="mt-4">
+                    <h5 class="mb-3">What Others Are Saying</h5>
                     {% for review in reviews %}
                     <div class="review-item border-bottom pb-3 mb-3">
-                        <p class="mb-1"><strong>{{ review.user }}</strong> <small class="text-muted">rated {{ review.rating }}⭐</small></p>
-                        <p class="mb-0">{{ review.review_text }}</p>
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="bg-light rounded-circle p-2 me-2">
+                                <i class="bi bi-person-fill"></i>
+                            </span>
+                            <div>
+                                <strong>{{ review.user }}</strong> 
+                                {% if review.user.kyc_verified %}
+                                <span class="badge bg-success text-white ms-2">Verified Food Critic</span>
+                                {% endif %}
+                            </div>
+                            <div class="ms-auto text-warning">
+                                {% with ''|center:review.rating as range %}
+                                {% for _ in range %}
+                                <i class="bi bi-star-fill"></i>
+                                {% endfor %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        <p class="mb-0 ps-4 ms-2">{{ review.review_text }}</p>
                     </div>
                     {% empty %}
-                    <p class="text-muted">No reviews yet. Be the first to review!</p>
+                    <div class="text-center p-4 bg-light rounded-3">
+                        <i class="bi bi-chat-square-text fs-1 text-secondary mb-2"></i>
+                        <p class="text-muted">No reviews yet. Be the first to share your experience!</p>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Right Column: Map -->
+        <!-- Right Column: Map with Improved Design -->
         <div class="col-lg-4">
-            <div class="card shadow-sm p-3">
-                <h4 class="mb-3">Location</h4>
-                <div class="ratio ratio-1x1">
-                    <iframe
-                        src="{{ map_embed_url }}"
-                        class="rounded"
-                        style="border:0;"
-                        allowfullscreen
-                        loading="lazy">
-                    </iframe>
+            <div class="card shadow-sm border-0 rounded-3 p-3">
+                <h4 class="mb-3 fw-bold">Location</h4>
+                <div class="map-container shadow-sm rounded-3 overflow-hidden">
+                    <div class="ratio ratio-1x1">
+                        <iframe
+                            src="{{ map_embed_url }}"
+                            class="rounded"
+                            style="border:0;"
+                            allowfullscreen
+                            loading="lazy">
+                        </iframe>
+                    </div>
+                </div>
+                
+                <!-- Added Contact Information Section -->
+                <div class="mt-4">
+                    <h5 class="mb-3">Contact Information</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-telephone-fill text-primary me-2"></i> {{ restaurant.phone|default:"Not Available" }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-globe text-primary me-2"></i> 
+                            {% if restaurant.website %}
+                            <a href="{{ restaurant.website }}" target="_blank" class="text-decoration-none">Visit Website</a>
+                            {% else %}
+                            Not Available
+                            {% endif %}
+                        </li>
+                        <li>
+                            <i class="bi bi-clock-fill text-primary me-2"></i> 
+                            {% if restaurant.opening_hours %}
+                            {{ restaurant.opening_hours }}
+                            {% else %}
+                            Call for hours
+                            {% endif %}
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

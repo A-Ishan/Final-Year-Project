@@ -1,11 +1,14 @@
-from django.shortcuts import render
 import requests
 from django.conf import settings
+from restaurants.models import Restaurant
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import ContactForm
 
 def home(request):
     API_KEY = settings.GOOGLE_PLACES_API_KEY
-    LOCATION = "27.7172,85.3240"  # Latitude and Longitude for Kathmandu
-    RADIUS = 5000  # Search radius in meters
+    LOCATION = "27.7172,85.3240"  
+    RADIUS = 5000  
     TYPE = "restaurant"
 
     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
@@ -31,3 +34,20 @@ def home(request):
         ]
 
     return render(request, 'home/home.html', {'restaurants': restaurants, 'api_key': API_KEY})
+
+
+def about(request):
+    return render(request, 'home/about.html')
+
+
+
+def contact_us(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your message has been sent successfully!")
+            return redirect('contact_us')
+    else:
+        form = ContactForm()
+    return render(request, 'home/contacts.html', {'form': form})

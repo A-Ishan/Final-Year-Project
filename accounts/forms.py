@@ -40,3 +40,11 @@ class ProfilePictureForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['profile_picture']
+
+
+
+class ForgotPasswordForm(forms.Form):
+    phone_number = forms.CharField(max_length=15, label='Phone Number')
+
+class NewPasswordForm(forms.Form):
+    password = forms.CharField(widget=forms.PasswordInput(), label='New Password')

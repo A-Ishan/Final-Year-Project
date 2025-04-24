@@ -1,41 +1,168 @@
 {% extends 'base.html' %}
 {% block content %}
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key={{ apikey }}"></script>
+<style>
+  .restaurant-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .restaurant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  
+  .restaurant-img-container {
+    height: 180px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .restaurant-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+  }
+  
+  .restaurant-card:hover .restaurant-img {
+    transform: scale(1.05);
+  }
+  
+  .restaurant-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8f9fa;
+    color: #adb5bd;
+  }
+  
+  .restaurant-title {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #343a40;
+  }
+  
+  .restaurant-rating {
+    color: #ff9800;
+    font-weight: 500;
+  }
+  
+  .restaurant-price {
+    color: #2e7d32;
+    font-weight: 500;
+  }
+  
+  .restaurant-distance {
+    color: #546e7a;
+    font-size: 0.9rem;
+  }
+  
+  .map-container {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  }
+  
+  #map {
+    height: 400px;
+    width: 100%;
+  }
+  
+  .scan-btn {
+    width: 100%;
+    margin-top: 10px;
+    border-radius: 8px;
+    padding: 10px;
+    font-weight: 500;
+  }
+  
+  .filter-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  }
+  
+  .filter-heading {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #495057;
+  }
+  
+  .search-container {
+    margin-bottom: 25px;
+  }
+  
+  .form-control:focus {
+    box-shadow: none;
+    border-color: #0d6efd;
+  }
+  
+  .btn-view-details {
+    width: 100%;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+</style>
+
+<main class="container my-5">
+    <div class="row">
+        <div class="col-lg-3 mb-4">
+            <div class="filter-section">
+                <h5 class="filter-heading">Search</h5>
+                <div class="input-group search-container">
+                    <input type="text" class="form-control" placeholder="Search restaurants..." id="searchBox">
+                    <button class="btn btn-primary" id="searchBtn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+
+                <h5 class="filter-heading">Food Type</h5>
+                <div class="category-container">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="category" id="all-categories" value="" checked>
+                        <label class="form-check-label" for="all-categories">All Categories</label>
+                    </div>
+                    {% for category in categories %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="category" id="category{{ category.id }}" value="{{ category.id }}">
+                            <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mb-4">
+            <div id="restaurantList" class="row g-4"></div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="map-container mb-3">
+                <div id="map"></div>
+            </div>
+            <button class="btn btn-primary scan-btn" id="scanBtn">
+                <i class="fas fa-location-arrow me-2"></i>Scan Nearby Restaurants
+            </button>
+        </div>
+    </div>
+</main>
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMapWrapper"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
 <script>
-    let map;
-    let userLatitude = null;
-    let userLongitude = null;
-    var locations1 = [];
-    let markers = []; // Array to store all map markers
+    let map, userLatitude, userLongitude, markers = [];
 
-    function initMap() {
-        if (userLatitude === null || userLongitude === null) {
-            console.error("User location not set yet.");
-            return;
-        }
-
-        map = new google.maps.Map(document.getElementById("map"), {
-            center: { lat: userLatitude, lng: userLongitude },
-            zoom: 14,
-            styles: [
-                { "featureType": "water", "stylers": [{ "color": "#46bcec" }, { "visibility": "on" }] },
-                { "featureType": "landscape", "stylers": [{ "color": "#f2f2f2" }] },
-                { "featureType": "road", "stylers": [{ "saturation": -100 }, { "lightness": 45 }] },
-                { "featureType": "poi", "stylers": [{ "visibility": "off" }] }
-            ]
-        });
-
-        new google.maps.Marker({
-            position: { lat: userLatitude, lng: userLongitude },
-            map: map,
-            icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-            title: "You are here",
-        });
-    }
-
-    function getUserLocationAndInitMap() {
+    function initMapWrapper() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(position => {
                 userLatitude = position.coords.latitude;
@@ -48,157 +175,124 @@
         }
     }
 
-    function fetchRestaurants(latitude, longitude) {
-        let selectedCategories = $(".category:checked").map(function() {
-            return $(this).val();
-        }).get();
-        
-        let searchQuery = $("#searchBox").val().trim();
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: { lat: userLatitude, lng: userLongitude },
+            zoom: 14,
+            styles: [/* custom map styles here */]
+        });
 
-        $.getJSON("/restaurants/get_nearby_restaurants/", {
-            latitude: latitude,
-            longitude: longitude,
-            category: selectedCategories.join(","),
-            keyword: searchQuery // Send search query
+        new google.maps.Marker({
+            position: { lat: userLatitude, lng: userLongitude },
+            map: map,
+            icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            title: "You are here"
+        });
+    }
+
+    function fetchRestaurants(lat, lng, mode = "top") {
+        const category = $("input[name='category']:checked").val();
+        const keyword = $("#searchBox").val();
+
+        $("#restaurantList").html(`
+            <div class="d-flex justify-content-center w-100">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="ms-2">Loading restaurants...</span>
+            </div>
+        `);
+
+        $.get("/restaurants/get_nearby_restaurants/", {
+            latitude: lat,
+            longitude: lng,
+            category: category,
+            keyword: keyword,
+            mode: mode
         }, function(data) {
-            $("#restaurantList").empty();
-            if (data.restaurants && data.restaurants.length > 0) {
+            let messageText = mode === "top" 
+                ? "Top 10 restaurants in results"
+                : "Nearby restaurants from your location";
+        
+            $("#restaurantList").html(`
+                <div class="col-12 mb-3">
+                    <h5 class="text-primary text-center fw-bold">${messageText}</h5>
+                </div>
+            `);
+        
+            if (data.restaurants.length) {
                 data.restaurants.forEach(r => {
                     $("#restaurantList").append(`
-                        <div class="col-md-6">
+                        <div class="col-md-6 mb-4">
                             <div class="card restaurant-card border-0 shadow-sm">
-                                ${r.image ? `<img src="${r.image}" class="card-img-top restaurant-img" alt="Restaurant Image">` : ""}
+                                <div class="restaurant-img-container">
+                                    ${r.image ? 
+                                        `<img src="${r.image}" class="restaurant-img" alt="${r.name}">` :
+                                        `<div class="restaurant-placeholder">
+                                            <span><i class="fas fa-utensils fa-2x"></i></span>
+                                        </div>`
+                                    }
+                                </div>
                                 <div class="card-body">
-                                    <h5 class="card-title">${r.name}</h5>
-                                    <p class="card-text">⭐ ${r.rating}</p>
-                                    <p class="text-muted">📍 ${r.address}</p>
-                                    <p class="card-text">${r.distance} meters</p>
-                                    <a href="/restaurants/${r.place_id}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                    <h5 class="restaurant-title">${r.name}</h5>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="restaurant-rating">
+                                            <i class="fas fa-star"></i> ${r.rating}
+                                            <small class="text-muted">(${r.review_count})</small>
+                                        </span>
+                                        <span class="restaurant-price">
+                                            ${r.price_level ? '💰'.repeat(parseInt(r.price_level)) : 'Price N/A'}
+                                        </span>
+                                    </div>
+                                    <p class="restaurant-distance mb-3">
+                                        <i class="fas fa-map-marker-alt me-1"></i> ${(r.distance / 1000).toFixed(1)} km away
+                                    </p>
+                                    <a href="/restaurants/${r.place_id}" class="btn btn-outline-primary btn-sm btn-view-details">
+                                        View Details
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     `);
                 });
             } else {
-                $("#restaurantList").html("<p class='text-center text-danger'>No restaurants found.</p>");
+                $("#restaurantList").append(`
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No restaurants found</h5>
+                        <p class="text-muted">Try adjusting your search criteria</p>
+                    </div>
+                `);
             }
-            if (data.locations) {
-                locations1 = [];
-                locations1 = data.locations;
-                addMarkersToMap(locations1);
-            }
-        }).fail(() => alert("Failed to fetch restaurants!"));
-    }
-
-    function addMarkersToMap(locations) {
-        if (!map) {
-            console.error("Map is not initialized yet.");
-            return;
-        }
-
-        // Clear existing markers from the map
-        markers.forEach(marker => marker.setMap(null));
-        markers = []; // Reset the markers array
-
-        // Add new markers to the map
-        locations.forEach((location) => {
-            if (location.lat && location.lng) {
+        
+            // Update markers
+            if (markers.length) markers.forEach(m => m.setMap(null));
+            markers = [];
+            data.locations.forEach(loc => {
                 const marker = new google.maps.Marker({
-                    position: { lat: location.lat, lng: location.lng },
+                    position: { lat: loc.lat, lng: loc.lng },
                     map: map,
-                    title: location.title || "No title available",
+                    title: loc.title,
+                    animation: google.maps.Animation.DROP
                 });
-                markers.push(marker); // Store the marker in the array
-            }
+        
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<strong>${loc.title}</strong>`
+                });
+        
+                marker.addListener('click', () => {
+                    infoWindow.open(map, marker);
+                });
+        
+                markers.push(marker);
+            });
         });
+        
     }
 
-    $(document).ready(() => {
-        getUserLocationAndInitMap();
-
-        $(".category").on("change", function() {
-            fetchRestaurants(userLatitude, userLongitude);
-        });
-
-        $("#searchBox").on("keyup", function() {
-            fetchRestaurants(userLatitude, userLongitude);
-        });
-
-        $("#searchBtn").on("click", function() {
-            fetchRestaurants(userLatitude, userLongitude);
-        });
-
-        $("#scanBtn").on("click", function() {
-            fetchRestaurants(userLatitude, userLongitude);
-        });
-    });
+    $("#searchBtn").click(() => fetchRestaurants(userLatitude, userLongitude));
+    $("input[name='category']").change(() => fetchRestaurants(userLatitude, userLongitude));
+    $("#scanBtn").click(() => fetchRestaurants(userLatitude, userLongitude, "nearby"));
 </script>
 
-<style>
-    body {
-        background-color: #f8f9fa;
-        font-family: 'Poppins', sans-serif;
-    }
-
-    .restaurant-card {
-        border-radius: 12px;
-        overflow: hidden;
-        transition: all 0.3s ease-in-out;
-    }
-
-    .restaurant-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    .restaurant-img {
-        height: 200px;
-        object-fit: cover;
-    }
-
-    .map-container {
-        position: relative;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .scan-btn {
-        width: 100%;
-        margin-top: 10px;
-    }
-</style>
-
-<main class="container my-5">
-    <div class="row">
-        <div class="col-lg-3 mb-4">
-            <h5 class="mb-3">Search</h5>
-            <div class="input-group mb-4">
-                <input type="text" class="form-control" placeholder="Search..." id="searchBox">
-                <button class="btn btn-primary" id="searchBtn">Search</button>
-            </div>
-
-            <h5 class="mb-3">Categories</h5>
-            <form>
-                {% for category in categories %}
-                    <div class="form-check">
-                        <input class="form-check-input category" type="checkbox" value="{{ category.name }}" id="category{{ category.id }}">
-                        <label class="form-check-label" for="category{{ category.id }}">{{ category.name }}</label>
-                    </div>
-                {% endfor %}
-            </form>
-        </div>
-
-        <div class="col-lg-5 mb-4">
-            <div id="restaurantList" class="row g-4"></div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="map-container">
-                <div id="map" style="height: 400px;"></div>
-                <button class="btn btn-primary scan-btn" id="scanBtn">Scan Nearby Restaurants</button>
-            </div>
-        </div>
-    </div>
-</main>
 {% endblock %}

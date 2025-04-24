@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+{% if user.is_super or user.is_staff %}
+<div class="container mt-5 mb-5">
+    <div class="card shadow rounded-4 p-4">
+        <div class="row g-4">
+            <div class="col-md-8">
+                <h3 class="fw-semibold text-dark">👨‍💼 Welcome, Admin</h3>
+                <h5 class="mt-3 text-secondary">Pending KYC Verifications - {{ verification.full_name }}</h5>
+                <ul class="list-group mt-2">
+                    <li class="list-group-item">
+                        <strong>Full Name:</strong> {{ verification.full_name }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Social Media Link:</strong> 
+                        <a href="{{ verification.social_media_link }}" target="_blank">{{ verification.social_media_link }}</a>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Verification Reason:</strong> {{ verification.verification_reason }}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Document Front:</strong> 
+                        {% if verification.kyc_document_front %}
+                        <a href="{{ verification.kyc_document_front.url }}" target="_blank" class="btn btn-link">View Front</a>
+                        {% else %}
+                        <span class="text-muted">Not Provided</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Document Back:</strong> 
+                        {% if verification.kyc_document_back %}
+                        <a href="{{ verification.kyc_document_back.url }}" target="_blank" class="btn btn-link">View Back</a>
+                        {% else %}
+                        <span class="text-muted">Not Provided</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Selfie Document:</strong> 
+                        {% if verification.kyc_document_selfie %}
+                        <a href="{{ verification.kyc_document_selfie.url }}" target="_blank" class="btn btn-link">View Selfie</a>
+                        {% else %}
+                        <span class="text-muted">Not Provided</span>
+                        {% endif %}
+                    </li>
+                </ul>
+                <div class="mt-4">
+                    <form method="POST" action="{% url 'verify_kyc' verification.id %}">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="approve" class="btn btn-success me-2">Approve</button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="container mt-5">
+    <div class="alert alert-danger">
+        You do not have permission to view this page.
+    </div>
+</div>
+{% endif %}
+{% endblock %}
