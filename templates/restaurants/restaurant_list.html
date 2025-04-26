@@ -113,6 +113,11 @@
   }
 </style>
 
+<!-- Meta tags to prevent caching -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <main class="container my-5">
     <div class="row">
         <div class="col-lg-3 mb-4">
@@ -161,12 +166,30 @@
 
 <script>
     let map, userLatitude, userLongitude, markers = [];
+    
+    // Store coordinates in sessionStorage
+    function saveCoordinates() {
+        if (userLatitude && userLongitude) {
+            sessionStorage.setItem('userLatitude', userLatitude);
+            sessionStorage.setItem('userLongitude', userLongitude);
+        }
+    }
 
     function initMapWrapper() {
-        if (navigator.geolocation) {
+        // Check if we have stored coordinates first
+        const storedLat = sessionStorage.getItem('userLatitude');
+        const storedLng = sessionStorage.getItem('userLongitude');
+        
+        if (storedLat && storedLng) {
+            userLatitude = parseFloat(storedLat);
+            userLongitude = parseFloat(storedLng);
+            initMap();
+            fetchRestaurants(userLatitude, userLongitude);
+        } else if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(position => {
                 userLatitude = position.coords.latitude;
                 userLongitude = position.coords.longitude;
+                saveCoordinates();
                 initMap();
                 fetchRestaurants(userLatitude, userLongitude);
             }, () => alert("Geolocation not available."));
@@ -203,96 +226,189 @@
             </div>
         `);
 
-        $.get("/restaurants/get_nearby_restaurants/", {
-            latitude: lat,
-            longitude: lng,
-            category: category,
-            keyword: keyword,
-            mode: mode
-        }, function(data) {
-            let messageText = mode === "top" 
-                ? "Top 10 restaurants in results"
-                : "Nearby restaurants from your location";
-        
-            $("#restaurantList").html(`
-                <div class="col-12 mb-3">
-                    <h5 class="text-primary text-center fw-bold">${messageText}</h5>
-                </div>
-            `);
-        
-            if (data.restaurants.length) {
-                data.restaurants.forEach(r => {
-                    $("#restaurantList").append(`
-                        <div class="col-md-6 mb-4">
-                            <div class="card restaurant-card border-0 shadow-sm">
-                                <div class="restaurant-img-container">
-                                    ${r.image ? 
-                                        `<img src="${r.image}" class="restaurant-img" alt="${r.name}">` :
-                                        `<div class="restaurant-placeholder">
-                                            <span><i class="fas fa-utensils fa-2x"></i></span>
-                                        </div>`
-                                    }
-                                </div>
-                                <div class="card-body">
-                                    <h5 class="restaurant-title">${r.name}</h5>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="restaurant-rating">
-                                            <i class="fas fa-star"></i> ${r.rating}
-                                            <small class="text-muted">(${r.review_count})</small>
-                                        </span>
-                                        <span class="restaurant-price">
-                                            ${r.price_level ? '💰'.repeat(parseInt(r.price_level)) : 'Price N/A'}
-                                        </span>
+        $.ajax({
+            url: "/restaurants/get_nearby_restaurants/",
+            type: "GET",
+            data: {
+                latitude: lat,
+                longitude: lng,
+                category: category,
+                keyword: keyword,
+                mode: mode
+            },
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            success: function(data) {
+                let messageText = mode === "top" 
+                    ? "Top 10 restaurants in results"
+                    : "Nearby restaurants from your location";
+            
+                $("#restaurantList").html(`
+                    <div class="col-12 mb-3">
+                        <h5 class="text-primary text-center fw-bold">${messageText}</h5>
+                    </div>
+                `);
+            
+                if (data.restaurants.length) {
+                    data.restaurants.forEach(r => {
+                        $("#restaurantList").append(`
+                            <div class="col-md-6 mb-4">
+                                <div class="card restaurant-card border-0 shadow-sm">
+                                    <div class="restaurant-img-container">
+                                        ${r.image ? 
+                                            `<img src="${r.image}" class="restaurant-img" alt="${r.name}">` :
+                                            `<div class="restaurant-placeholder">
+                                                <span><i class="fas fa-utensils fa-2x"></i></span>
+                                            </div>`
+                                        }
                                     </div>
-                                    <p class="restaurant-distance mb-3">
-                                        <i class="fas fa-map-marker-alt me-1"></i> ${(r.distance / 1000).toFixed(1)} km away
-                                    </p>
-                                    <a href="/restaurants/${r.place_id}" class="btn btn-outline-primary btn-sm btn-view-details">
-                                        View Details
-                                    </a>
+                                    <div class="card-body">
+                                        <h5 class="restaurant-title">${r.name}</h5>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="restaurant-rating">
+                                                <i class="fas fa-star"></i> ${r.rating}
+                                                <small class="text-muted">(${r.review_count})</small>
+                                            </span>
+                                            <span class="restaurant-price">
+                                                ${r.price_level ? '💰'.repeat(parseInt(r.price_level)) : 'Price N/A'}
+                                            </span>
+                                        </div>
+                                        <p class="restaurant-distance mb-3">
+                                            <i class="fas fa-map-marker-alt me-1"></i> ${(r.distance / 1000).toFixed(1)} km away
+                                        </p>
+                                        <a href="/restaurants/${r.place_id}" class="btn btn-outline-primary btn-sm btn-view-details">
+                                            View Details
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
+                        `);
+                    });
+                } else {
+                    $("#restaurantList").append(`
+                        <div class="col-12 text-center py-5">
+                            <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No restaurants found</h5>
+                            <p class="text-muted">Try adjusting your search criteria</p>
                         </div>
                     `);
+                }
+            
+                // Update markers
+                if (markers.length) markers.forEach(m => m.setMap(null));
+                markers = [];
+                data.locations.forEach(loc => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: loc.lat, lng: loc.lng },
+                        map: map,
+                        title: loc.title,
+                        animation: google.maps.Animation.DROP
+                    });
+            
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `<strong>${loc.title}</strong>`
+                    });
+            
+                    marker.addListener('click', () => {
+                        infoWindow.open(map, marker);
+                    });
+            
+                    markers.push(marker);
                 });
-            } else {
-                $("#restaurantList").append(`
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching restaurants:", error);
+                $("#restaurantList").html(`
                     <div class="col-12 text-center py-5">
-                        <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No restaurants found</h5>
-                        <p class="text-muted">Try adjusting your search criteria</p>
+                        <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                        <h5 class="text-danger">Error loading restaurants</h5>
+                        <p class="text-muted">Please refresh the page and try again</p>
                     </div>
                 `);
             }
-        
-            // Update markers
-            if (markers.length) markers.forEach(m => m.setMap(null));
-            markers = [];
-            data.locations.forEach(loc => {
-                const marker = new google.maps.Marker({
-                    position: { lat: loc.lat, lng: loc.lng },
-                    map: map,
-                    title: loc.title,
-                    animation: google.maps.Animation.DROP
-                });
-        
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `<strong>${loc.title}</strong>`
-                });
-        
-                marker.addListener('click', () => {
-                    infoWindow.open(map, marker);
-                });
-        
-                markers.push(marker);
-            });
         });
-        
     }
 
-    $("#searchBtn").click(() => fetchRestaurants(userLatitude, userLongitude));
-    $("input[name='category']").change(() => fetchRestaurants(userLatitude, userLongitude));
-    $("#scanBtn").click(() => fetchRestaurants(userLatitude, userLongitude, "nearby"));
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            const storedLat = sessionStorage.getItem('userLatitude');
+            const storedLng = sessionStorage.getItem('userLongitude');
+            
+            if (storedLat && storedLng) {
+                userLatitude = parseFloat(storedLat);
+                userLongitude = parseFloat(storedLng);
+                fetchRestaurants(userLatitude, userLongitude);
+            }
+        }
+    });
+
+    // Handle back/forward navigation
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            const storedLat = sessionStorage.getItem('userLatitude');
+            const storedLng = sessionStorage.getItem('userLongitude');
+            
+            if (storedLat && storedLng) {
+                userLatitude = parseFloat(storedLat);
+                userLongitude = parseFloat(storedLng);
+                
+                // Only initialize map if Google Maps is loaded
+                if (typeof google !== 'undefined' && google.maps) {
+                    if (!map) {
+                        initMap();
+                    }
+                    fetchRestaurants(userLatitude, userLongitude);
+                }
+            }
+        }
+    });
+
+    // Handle browser back button and shortcuts
+    window.addEventListener('popstate', function() {
+        const storedLat = sessionStorage.getItem('userLatitude');
+        const storedLng = sessionStorage.getItem('userLongitude');
+        
+        if (storedLat && storedLng) {
+            userLatitude = parseFloat(storedLat);
+            userLongitude = parseFloat(storedLng);
+            fetchRestaurants(userLatitude, userLongitude);
+        }
+    });
+
+    // Setup event handlers for UI elements
+    $("#searchBtn").click(() => {
+        if (userLatitude && userLongitude) {
+            fetchRestaurants(userLatitude, userLongitude);
+        }
+    });
+    
+    $("input[name='category']").change(() => {
+        if (userLatitude && userLongitude) {
+            fetchRestaurants(userLatitude, userLongitude);
+        }
+    });
+    
+    $("#scanBtn").click(() => {
+        if (userLatitude && userLongitude) {
+            fetchRestaurants(userLatitude, userLongitude, "nearby");
+        }
+    });
+
+    // On document ready
+    $(document).ready(function() {
+        // If we have coordinates in session storage, use them
+        const storedLat = sessionStorage.getItem('userLatitude');
+        const storedLng = sessionStorage.getItem('userLongitude');
+        
+        if (storedLat && storedLng && typeof google !== 'undefined' && google.maps) {
+            userLatitude = parseFloat(storedLat);
+            userLongitude = parseFloat(storedLng);
+            initMap();
+            fetchRestaurants(userLatitude, userLongitude);
+        }
+    });
 </script>
 
 {% endblock %}
