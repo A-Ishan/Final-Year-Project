@@ -35,7 +35,7 @@ class Command(BaseCommand):
 
                     # Parse categories from 'types'
                     type_string = row.get('types', '')
-                    category_names = [c.strip() for c in type_string.strip("[]").replace("'", "").split(',') if c.strip()]
+                    category_names = [c.strip().capitalize() for c in type_string.strip("[]").replace("'", "").split(',') if c.strip()]
                     category_objs = []
                     for name in category_names:
                         category_obj, _ = Category.objects.get_or_create(name=name)
