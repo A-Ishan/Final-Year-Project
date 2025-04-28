@@ -58,12 +58,74 @@
 
     {% if messages %}
     {% for message in messages %}
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <div class="alert alert-success alert-dismissible custom-alert shadow-lg rounded-3" id="alert-{{ forloop.counter }}">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="flex-grow-1">
+            {{ message }}
+          </div>
+          <button type="button" class="btn-close ms-3" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
       </div>
+      <script>
+        setTimeout(function() {
+          var alertElement = document.getElementById('alert-{{ forloop.counter }}');
+          if (alertElement) {
+            alertElement.classList.add('fade-out');
+            setTimeout(function() {
+              alertElement.remove();
+            }, 800); // Allow smooth fade
+          }
+        }, 3000);
+      </script>
     {% endfor %}
-    {% endif %}
+  {% endif %}
+  
+  <style>
+    .custom-alert {
+      animation: popIn 0.5s ease;
+      background-color: #d1e7dd; /* uniform light green */
+      border: 1px solid #badbcc; /* a soft border */
+      color: #0f5132; /* darker green text for contrast */
+      font-weight: 500;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+  
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  
+    .fade-out {
+      animation: fadeOut 0.8s forwards;
+    }
+  
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+    }
+  
+    .btn-close {
+      filter: brightness(0.5);
+    }
+  
+    .btn-close:hover {
+      filter: brightness(1);
+    }
+  </style>
     {% block content %}
     {% endblock %}
     <footer class="footer-section bg-dark text-white py-5 mt-5">
