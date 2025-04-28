@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ restaurant.name }}{% endblock %}
+{% load static %}
 {% block content %}
 
 <main class="container my-5">
@@ -9,7 +10,13 @@
             <!-- Restaurant Image with Fixed Height for Consistency -->
             <div class="col-md-5 position-relative">
                 <div style="height: 350px; overflow: hidden;">
-                    <img src="{{ restaurant.image }}" class="img-fluid w-100 h-100 object-cover" alt="{{ restaurant.name }}" style="object-position: center;">
+                    {% if restaurant.image %} 
+                    <img src="{{ restaurant.image }}" class="img-fluid w-100 h-100 object-cover" alt="Restaurant Image" style="object-position: center;">
+                    {% else %} 
+                    <div class="restaurant-placeholder d-flex justify-content-center align-items-center bg-light" style="height: 100%; color: #6c757d; font-size: 2rem;">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <!-- Restaurant Info with Improved Layout -->
@@ -23,7 +30,12 @@
                         </p>
                         <p class="mb-3 d-flex align-items-center">
                             <i class="bi bi-cash-stack text-success me-2"></i> 
-                            <span><strong class="text-secondary">Price Tier:</strong> {{ restaurant.price_level }}</span>
+                            <span><strong class="text-secondary">Categories:</strong></span>
+                            <ul class="list-inline mb-0 ms-2">
+                                {% for category in categories %}
+                                <li class="list-inline-item badge bg-primary text-white px-3 py-2 me-1">{{ category }}</li>
+                                {% endfor %}
+                            </ul>
                         </p>
                         <p class="mb-3 d-flex align-items-center">
                             <i class="bi bi-star-fill text-warning me-2"></i> 
