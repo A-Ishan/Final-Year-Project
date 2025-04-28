@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.db.models import Avg
-
+import requests
 from .models import Review, Category, Restaurant, RestaurantReview
 
 
@@ -42,6 +42,41 @@ def calculate_simple_rating(restaurant):
     rating = min(rating + min(review_count / 100, 0.5), 5.0)
 
     return round(rating, 1), review_count
+
+
+
+def get_city_country(api_key, place_id):
+    url = "https://maps.googleapis.com/maps/api/place/details/json"
+    
+    params = {
+        "place_id": place_id,
+        "key": api_key,
+        "fields": "address_component"
+    }
+    
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get('status') == 'OK':
+            components = data['result']['address_components']
+            city = None
+            country = None
+            for comp in components:
+                if 'locality' in comp['types']:
+                    city = comp['long_name']
+                if 'country' in comp['types']:
+                    country = comp['long_name']
+            if city and country:
+                return f"{city}, {country}"
+            elif country:
+                return country  # fallback
+        else:
+            print(f"Error from API: {data.get('status')}")
+    else:
+        print(f"HTTP error: {response.status_code}")
+
+    return None
+
 
 
 @login_required
@@ -90,9 +125,10 @@ def get_nearby_restaurants(request):
         if mode == "nearby":
             results.sort(key=lambda x: x["distance"])
         else:
-            results.sort(key=lambda x: (-x["rating"], x["distance"]))
+            results.sort(key=lambda x: (-x["review_count"] >= 10, -x["rating"], x["distance"]))
 
         top_results = results[:10]
+        top_results.sort(key=lambda x: ( -x["review_count"]))
 
         restaurants_data = [{
             "id": item["restaurant"].id,
@@ -103,6 +139,7 @@ def get_nearby_restaurants(request):
             "price_level": item["restaurant"].price_level,
             "distance": round(item["distance"], 2),
             "review_count": item["review_count"],
+            "category": item["restaurant"].categories.all()[0].name if item["restaurant"].categories.exists() else "N/A",
         } for item in top_results]
 
         locations = [{
@@ -116,11 +153,12 @@ def get_nearby_restaurants(request):
     except (ValueError, TypeError) as e:
         return JsonResponse({"error": str(e)}, status=400)
 
-
 @login_required
 def restaurant_detail(request, place_id):
     restaurant = get_object_or_404(Restaurant, place_id=place_id)
-
+    catagories= restaurant.categories.all()
+    # print(catagories)
+    address = get_city_country(settings.GOOGLE_PLACES_API_KEY, place_id)
     reviews = Review.objects.filter(
         id__in=RestaurantReview.objects.filter(restaurant=restaurant).values_list('review_id', flat=True)
     )
@@ -147,7 +185,10 @@ def restaurant_detail(request, place_id):
             "rating": rating,
             "price_level": restaurant.price_level,
             "image": restaurant.image,
+            "address": address,
+
         },
         "reviews": reviews,
-        "map_embed_url": f"https://www.google.com/maps/embed/v1/place?q=place_id:{place_id}&key={settings.GOOGLE_PLACES_API_KEY}"
+        "map_embed_url": f"https://www.google.com/maps/embed/v1/place?q=place_id:{place_id}&key={settings.GOOGLE_PLACES_API_KEY}",
+        "categories": catagories,
     })
