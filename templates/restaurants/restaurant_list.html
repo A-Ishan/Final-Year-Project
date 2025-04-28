@@ -270,8 +270,8 @@
                                                 <i class="fas fa-star"></i> ${r.rating}
                                                 <small class="text-muted">(${r.review_count})</small>
                                             </span>
-                                            <span class="restaurant-price">
-                                                ${r.price_level ? '💰'.repeat(parseInt(r.price_level)) : 'Price N/A'}
+                                            <span class="restaurant-category">
+                                               <span class="badge bg-primary">${r.category}</span>
                                             </span>
                                         </div>
                                         <p class="restaurant-distance mb-3">
